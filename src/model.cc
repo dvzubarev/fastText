@@ -68,7 +68,7 @@ void Model::predict(
 
 void Model::update(
     const std::vector<int32_t>& input,
-    const std::vector<int32_t>& targets,
+    const compact_sent_t::words_array_t& targets,
     int32_t targetIndex,
     real lr,
     State& state) {

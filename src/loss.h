@@ -12,6 +12,7 @@
 #include <random>
 #include <vector>
 
+#include "sent.h"
 #include "matrix.h"
 #include "model.h"
 #include "real.h"
@@ -41,7 +42,7 @@ class Loss {
   virtual ~Loss() = default;
 
   virtual real forward(
-      const std::vector<int32_t>& targets,
+      const compact_sent_t::words_array_t& targets,
       int32_t targetIndex,
       Model::State& state,
       real lr,
@@ -75,7 +76,7 @@ class OneVsAllLoss : public BinaryLogisticLoss {
   explicit OneVsAllLoss(std::shared_ptr<Matrix>& wo);
   ~OneVsAllLoss() noexcept override = default;
   real forward(
-      const std::vector<int32_t>& targets,
+      const compact_sent_t::words_array_t& targets,
       int32_t targetIndex,
       Model::State& state,
       real lr,
@@ -99,7 +100,7 @@ class NegativeSamplingLoss : public BinaryLogisticLoss {
   ~NegativeSamplingLoss() noexcept override = default;
 
   real forward(
-      const std::vector<int32_t>& targets,
+      const compact_sent_t::words_array_t& targets,
       int32_t targetIndex,
       Model::State& state,
       real lr,
@@ -135,7 +136,7 @@ class HierarchicalSoftmaxLoss : public BinaryLogisticLoss {
       const std::vector<int64_t>& counts);
   ~HierarchicalSoftmaxLoss() noexcept override = default;
   real forward(
-      const std::vector<int32_t>& targets,
+      const compact_sent_t::words_array_t& targets,
       int32_t targetIndex,
       Model::State& state,
       real lr,
@@ -152,7 +153,7 @@ class SoftmaxLoss : public Loss {
   explicit SoftmaxLoss(std::shared_ptr<Matrix>& wo);
   ~SoftmaxLoss() noexcept override = default;
   real forward(
-      const std::vector<int32_t>& targets,
+      const compact_sent_t::words_array_t& targets,
       int32_t targetIndex,
       Model::State& state,
       real lr,

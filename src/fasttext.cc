@@ -9,6 +9,7 @@
 #include "fasttext.h"
 #include "loss.h"
 #include "quantmatrix.h"
+#include "lp.h"
 
 #include <algorithm>
 #include <iomanip>
@@ -108,8 +109,19 @@ int32_t FastText::getLabelId(const std::string& label) const {
   return labelId;
 }
 
-void FastText::getWordVector(Vector& vec, const std::string& word) const {
-  const std::vector<int32_t>& ngrams = dict_->getSubwords(word);
+void FastText::getWordVector(Vector& vec, int32_t i) const {
+  const std::vector<int32_t>& ngrams = dict_->getSubwords(i);
+  vec.zero();
+  for (int i = 0; i < ngrams.size(); i++) {
+    addInputVector(vec, ngrams[i]);
+  }
+  if (ngrams.size() > 0) {
+    vec.mul(1.0 / ngrams.size());
+  }
+}
+
+void FastText::getWordVector(Vector& vec, const std::string& word, uint8_t pos_tag) const {
+  const std::vector<int32_t>& ngrams = dict_->getSubwords(word, pos_tag);
   vec.zero();
   for (int i = 0; i < ngrams.size(); i++) {
     addInputVector(vec, ngrams[i]);
@@ -135,11 +147,11 @@ void FastText::saveVectors(const std::string& filename) {
     throw std::invalid_argument(
         filename + " cannot be opened for saving vectors!");
   }
-  ofs << dict_->nwords() << " " << args_->dim << std::endl;
+  ofs << dict_->size() << " " << args_->dim << std::endl;
   Vector vec(args_->dim);
-  for (int32_t i = 0; i < dict_->nwords(); i++) {
+  for (int32_t i = 0; i < dict_->size(); i++) {
     std::string word = dict_->getWord(i);
-    getWordVector(vec, word);
+    getWordVector(vec, i);
     ofs << word << " " << vec << std::endl;
   }
   ofs.close();
@@ -376,11 +388,11 @@ void FastText::supervised(
     return;
   }
   if (args_->loss == loss_name::ova) {
-    model_->update(line, labels, Model::kAllLabelsAsTarget, lr, state);
+    // model_->update(line, labels, Model::kAllLabelsAsTarget, lr, state);
   } else {
     std::uniform_int_distribution<> uniform(0, labels.size() - 1);
     int32_t i = uniform(state.rng);
-    model_->update(line, labels, i, lr, state);
+    // model_->update(line, labels, i, lr, state);
   }
 }
 
@@ -399,7 +411,7 @@ void FastText::cbow(
         bow.insert(bow.end(), ngrams.cbegin(), ngrams.cend());
       }
     }
-    model_->update(bow, line, w, lr, state);
+    // model_->update(bow, line, w, lr, state);
   }
 }
 
@@ -413,9 +425,163 @@ void FastText::skipgram(
     const std::vector<int32_t>& ngrams = dict_->getSubwords(line[w]);
     for (int32_t c = -boundary; c <= boundary; c++) {
       if (c != 0 && w + c >= 0 && w + c < line.size()) {
-        model_->update(ngrams, line, w + c, lr, state);
+        // model_->update(ngrams, line, w + c, lr, state);
       }
     }
+  }
+}
+
+void FastText::syntax_skipgram(Model::State& state, real lr, const compact_line_t& line){
+  updateWordsModel(state, lr, line.target.words);
+  updatePhraseModel(state, lr, line.target.phrases);
+  for (const auto& os : line.other_langs){
+    updateWordsModel(state, lr, os.words);
+    updatePhraseModel(state, lr, os.phrases);
+    //TODO map other sent to target
+  }
+}
+
+void FastText::updateWordsModel(Model::State& state, real lr,
+                                const words_array_t& words){
+
+  for (int32_t w = 0; w < words.size(); w++) {
+    if( words[w].num == -1 )
+      continue;
+    const std::vector<int32_t>& feats = dict_->getSubwords(words[w].num);
+
+    auto update_func = [&](int32_t pos){
+      model_->update(feats, words, pos, lr, state);
+    };
+
+    callOnAllSiblings(words, w, update_func);
+    callOnChilds(words, w, update_func);
+    callOnHeads(words, w, update_func);
+  }
+}
+void
+FastText::
+updatePhraseModel(Model::State& state, real lr,
+                  const words_array_t& phrases){
+
+  for (int32_t w = 0; w < phrases.size(); w++) {
+    if(not phrases[w].is_phrase or phrases[w].num == -1 )
+      continue;
+    //This is phrase id and its components
+    const std::vector<int32_t>& feats = dict_->getSubwords(phrases[w].num);
+    //TODO add subwords of components?
+
+    auto update_func = [&](int32_t pos){
+      model_->update(feats, phrases, pos, lr, state);
+    };
+
+    callOnAllSiblings(phrases, w, update_func);
+    callOnChilds(phrases, w, update_func);
+    callOnHeads(phrases, w, update_func);
+
+
+    std::vector<int32_t> only_words(feats.size()-1);
+    std::copy(std::begin(feats)+1, std::end(feats), std::begin(only_words));
+    model_->update(only_words, phrases, w, lr, state);
+  }
+}
+
+
+inline bool is_modifier(const compact_word_t& w){
+  switch (SyntRel{w.synt_rel}){
+  case SyntRel::AMOD:
+  case SyntRel::ADVMOD:
+  case SyntRel::DISCOURSE:
+    return true;
+  default: return false;
+  }
+}
+
+inline bool is_acl(const compact_word_t& w){
+  switch (SyntRel{w.synt_rel}){
+  case SyntRel::ACL:
+  case SyntRel::ADVCL:
+    return true;
+  default: return false;
+  }
+}
+
+template<class Func>
+void
+FastText::callOnChilds(const words_array_t& words, int32_t head_pos,
+                       const Func& func){
+  const auto& head = words[head_pos];
+  if (not head.first_child_offs)
+    return;
+
+  int child_pos = head_pos + head.first_child_offs;
+  while(child_pos != -1){
+    const auto& child = words[child_pos];
+
+    //skip modifiers
+    if(not is_modifier(child) and child.num != -1)
+    {
+      func(child_pos);
+    }
+
+    if (child.next_sibling_offs)
+      child_pos += child.next_sibling_offs;
+    else
+      child_pos = -1;
+  }
+
+
+}
+
+template<class Func>
+void
+FastText::callOnAllSiblings(const words_array_t& words, int32_t word_pos, const Func& func){
+
+  const auto& word = words[word_pos];
+  //find the most left sibling
+  auto pos = word_pos;
+  while(words[pos].prev_sibling_offs)
+    pos = pos + words[pos].prev_sibling_offs;
+
+
+  while(pos != -1){
+    const auto& sibl = words[pos];
+
+    //skip modifiers
+    if(not is_modifier(sibl) and pos != word_pos and sibl.num != -1)
+    {
+      func(pos);
+    }
+
+
+    if (sibl.next_sibling_offs)
+      pos += sibl.next_sibling_offs;
+    else
+      pos = -1;
+  }
+}
+
+
+template<class Func>
+void
+FastText::callOnHeads(const words_array_t& words, int32_t word_pos, const Func& func){
+
+  int i = 0;
+  auto pos = word_pos;
+  while (true){
+    const auto& word = words[pos];
+    auto parent_pos = pos + word.parent_offs;
+    const auto& parent = words[parent_pos];
+    if (parent.num != -1 && parent_pos != pos)
+    {
+      func(parent_pos);
+    }
+
+    if (parent.parent_offs == 0 or
+        is_acl(word) or
+        is_modifier(word))
+      break;
+
+    pos = parent_pos;
   }
 }
 
@@ -540,9 +706,8 @@ std::vector<std::pair<std::string, Vector>> FastText::getNgramVectors(
 void FastText::precomputeWordVectors(DenseMatrix& wordVectors) {
   Vector vec(args_->dim);
   wordVectors.zero();
-  for (int32_t i = 0; i < dict_->nwords(); i++) {
-    std::string word = dict_->getWord(i);
-    getWordVector(vec, word);
+  for (int32_t i = 0; i < dict_->size(); i++) {
+    getWordVector(vec, i);
     real norm = vec.norm();
     if (norm > 0) {
       wordVectors.addVectorToRow(vec, i, 1.0 / norm);
@@ -553,17 +718,18 @@ void FastText::precomputeWordVectors(DenseMatrix& wordVectors) {
 void FastText::lazyComputeWordVectors() {
   if (!wordVectors_) {
     wordVectors_ = std::unique_ptr<DenseMatrix>(
-        new DenseMatrix(dict_->nwords(), args_->dim));
+        new DenseMatrix(dict_->size(), args_->dim));
     precomputeWordVectors(*wordVectors_);
   }
 }
 
 std::vector<std::pair<real, std::string>> FastText::getNN(
     const std::string& word,
+    int posTag,
     int32_t k) {
   Vector query(args_->dim);
 
-  getWordVector(query, word);
+  getWordVector(query, word, posTag);
 
   lazyComputeWordVectors();
   assert(wordVectors_);
@@ -631,13 +797,20 @@ bool FastText::keepTraining(const int64_t ntokens) const {
 
 void FastText::trainThread(int32_t threadId, const TrainCallback& callback) {
   std::ifstream ifs(args_->input);
-  utils::seek(ifs, threadId * utils::size(ifs) / args_->thread);
+  auto seek_pos = threadId * utils::size(ifs) / args_->thread;
+  utils::seek(ifs, seek_pos);
+  //skip to next line
+  if(seek_pos){
+    std::string temp;
+    std::getline(ifs, temp);
+  }
 
   Model::State state(args_->dim, output_->size(0), threadId + args_->seed);
 
   const int64_t ntokens = dict_->ntokens();
   int64_t localTokenCount = 0;
-  std::vector<int32_t> line, labels;
+  // std::vector<int32_t> line, labels;
+  compact_line_t line;
   uint64_t callbackCounter = 0;
   try {
     while (keepTraining(ntokens)) {
@@ -651,16 +824,21 @@ void FastText::trainThread(int32_t threadId, const TrainCallback& callback) {
         callback(progress, loss_, wst, lr, eta);
       }
       real lr = args_->lr * (1.0 - progress);
-      if (args_->model == model_name::sup) {
-        localTokenCount += dict_->getLine(ifs, line, labels);
-        supervised(state, lr, line, labels);
-      } else if (args_->model == model_name::cbow) {
+      //TODO
+      // if (args_->model == model_name::sup) {
+      //   localTokenCount += dict_->getLine(ifs, line, labels);
+      //   supervised(state, lr, line, labels);
+      // } else if (args_->model == model_name::cbow) {
+      //   localTokenCount += dict_->getLine(ifs, line, state.rng);
+      //   cbow(state, lr, line);
+      // } else if (args_->model == model_name::sg){
+      //   localTokenCount += dict_->getLine(ifs, line, state.rng);
+      //   skipgram(state, lr, line);
+      // }
+      if (args_->model == model_name::syntax_sg) {
         localTokenCount += dict_->getLine(ifs, line, state.rng);
-        cbow(state, lr, line);
-      } else if (args_->model == model_name::sg) {
-        localTokenCount += dict_->getLine(ifs, line, state.rng);
-        skipgram(state, lr, line);
-      }
+        syntax_skipgram(state, lr, line);
+      }else throw std::runtime_error("Unsupported model!");
       if (localTokenCount > args_->lrUpdateRate) {
         tokenCount_ += localTokenCount;
         localTokenCount = 0;
@@ -724,7 +902,7 @@ std::shared_ptr<Matrix> FastText::getInputMatrixFromFile(
 
 std::shared_ptr<Matrix> FastText::createRandomMatrix() const {
   std::shared_ptr<DenseMatrix> input = std::make_shared<DenseMatrix>(
-      dict_->nwords() + args_->bucket, args_->dim);
+      dict_->size(), args_->dim);
   input->uniform(1.0 / args_->dim, args_->thread, args_->seed);
 
   return input;
@@ -742,7 +920,15 @@ std::shared_ptr<Matrix> FastText::createTrainOutputMatrix() const {
 
 void FastText::train(const Args& args, const TrainCallback& callback) {
   args_ = std::make_shared<Args>(args);
-  dict_ = std::make_shared<Dictionary>(args_);
+
+  std::ifstream dict_ifs(args_->dicPath);
+  if (!dict_ifs.is_open()) {
+    throw std::invalid_argument(
+      args_->dicPath + " cannot be opened for training!");
+  }
+  dict_ = std::make_shared<Dictionary>(args_, dict_ifs);
+  dict_ifs.close();
+
   if (args_->input == "-") {
     // manage expectations
     throw std::invalid_argument("Cannot use stdin for training!");
@@ -750,10 +936,10 @@ void FastText::train(const Args& args, const TrainCallback& callback) {
   std::ifstream ifs(args_->input);
   if (!ifs.is_open()) {
     throw std::invalid_argument(
-        args_->input + " cannot be opened for training!");
+      args_->input + " cannot be opened for training!");
   }
-  dict_->readFromFile(ifs);
   ifs.close();
+
 
   if (!args_->pretrainedVectors.empty()) {
     input_ = getInputMatrixFromFile(args_->pretrainedVectors);
@@ -784,7 +970,7 @@ void FastText::startThreads(const TrainCallback& callback) {
   std::vector<std::thread> threads;
   if (args_->thread > 1) {
     for (int32_t i = 0; i < args_->thread; i++) {
-      threads.push_back(std::thread([=]() { trainThread(i, callback); }));
+      threads.push_back(std::thread([=, this]() { trainThread(i, callback); }));
     }
   } else {
     // webassembly can't instantiate `std::thread`

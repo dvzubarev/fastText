@@ -13,6 +13,7 @@
 #include <utility>
 #include <vector>
 
+#include "sent.h"
 #include "matrix.h"
 #include "real.h"
 #include "utils.h"
@@ -64,7 +65,8 @@ class Model {
       State& state) const;
   void update(
       const std::vector<int32_t>& input,
-      const std::vector<int32_t>& targets,
+      // const std::vector<int32_t>& targets,
+      const compact_sent_t::words_array_t& targets,
       int32_t targetIndex,
       real lr,
       State& state);

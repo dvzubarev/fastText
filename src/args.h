@@ -16,7 +16,7 @@
 
 namespace fasttext {
 
-enum class model_name : int { cbow = 1, sg, sup };
+enum class model_name : int { cbow = 1, sg, sup, syntax_sg };
 enum class loss_name : int { hs = 1, ns, softmax, ova };
 enum class metric_name : int {
   f1score = 1,
@@ -71,6 +71,9 @@ class Args {
   int autotunePredictions;
   int autotuneDuration;
   std::string autotuneModelSize;
+
+  std::string bpeCodesPath;
+  std::string dicPath;
 
   void parseArgs(const std::vector<std::string>& args);
   void printHelp();

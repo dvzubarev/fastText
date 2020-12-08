@@ -127,7 +127,7 @@ OneVsAllLoss::OneVsAllLoss(std::shared_ptr<Matrix>& wo)
     : BinaryLogisticLoss(wo) {}
 
 real OneVsAllLoss::forward(
-    const std::vector<int32_t>& targets,
+    const compact_sent_t::words_array_t& targets,
     int32_t /* we take all targets here */,
     Model::State& state,
     real lr,
@@ -135,7 +135,7 @@ real OneVsAllLoss::forward(
   real loss = 0.0;
   int32_t osz = state.output.size();
   for (int32_t i = 0; i < osz; i++) {
-    bool isMatch = utils::contains(targets, i);
+    bool isMatch = contains(targets, i);
     loss += binaryLogistic(i, state, isMatch, lr, backprop);
   }
 
@@ -162,14 +162,14 @@ NegativeSamplingLoss::NegativeSamplingLoss(
 }
 
 real NegativeSamplingLoss::forward(
-    const std::vector<int32_t>& targets,
+    const compact_sent_t::words_array_t& targets,
     int32_t targetIndex,
     Model::State& state,
     real lr,
     bool backprop) {
   assert(targetIndex >= 0);
   assert(targetIndex < targets.size());
-  int32_t target = targets[targetIndex];
+  int32_t target = targets[targetIndex].num;
   real loss = binaryLogistic(target, state, true, lr, backprop);
 
   for (int32_t n = 0; n < neg_; n++) {
@@ -245,13 +245,13 @@ void HierarchicalSoftmaxLoss::buildTree(const std::vector<int64_t>& counts) {
 }
 
 real HierarchicalSoftmaxLoss::forward(
-    const std::vector<int32_t>& targets,
+    const compact_sent_t::words_array_t& targets,
     int32_t targetIndex,
     Model::State& state,
     real lr,
     bool backprop) {
   real loss = 0.0;
-  int32_t target = targets[targetIndex];
+  int32_t target = targets[targetIndex].num;
   const std::vector<bool>& binaryCode = codes_[target];
   const std::vector<int32_t>& pathToRoot = paths_[target];
   for (int32_t i = 0; i < pathToRoot.size(); i++) {
@@ -320,7 +320,7 @@ void SoftmaxLoss::computeOutput(Model::State& state) const {
 }
 
 real SoftmaxLoss::forward(
-    const std::vector<int32_t>& targets,
+    const compact_sent_t::words_array_t& targets,
     int32_t targetIndex,
     Model::State& state,
     real lr,
@@ -329,7 +329,7 @@ real SoftmaxLoss::forward(
 
   assert(targetIndex >= 0);
   assert(targetIndex < targets.size());
-  int32_t target = targets[targetIndex];
+  int32_t target = targets[targetIndex].num;
 
   if (backprop) {
     int32_t osz = wo_->size(0);

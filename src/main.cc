@@ -30,6 +30,7 @@ void printUsage() {
       << "  predict-prob            predict most likely labels with "
          "probabilities\n"
       << "  skipgram                train a skipgram model\n"
+      << "  syntax_skipgram         train a syntax-skipgram model\n"
       << "  cbow                    train a cbow model\n"
       << "  print-word-vectors      print word vectors given a trained model\n"
       << "  print-sentence-vectors  print sentence vectors given a trained "
@@ -130,6 +131,15 @@ void printDumpUsage() {
   std::cout << "usage: fasttext dump <model> <option>\n\n"
             << "  <model>      model filename\n"
             << "  <option>     option from args,dict,input,output" << std::endl;
+}
+void printCreateDictUsage() {
+  std::cout << "usage: fasttext create_dict -input <file> -codes <codes> -output <out>\n\n"
+            << " <codes>  BPE codes path\n"
+            << std::endl;
+}
+void printDumpDictUsage() {
+  std::cout << "usage: fasttext dump_dict  <file>\n\n"
+            << std::endl;
 }
 
 void test(const std::vector<std::string>& args) {
@@ -316,8 +326,9 @@ void nn(const std::vector<std::string> args) {
   std::cout << prompt;
 
   std::string queryWord;
-  while (std::cin >> queryWord) {
-    printPredictions(fasttext.getNN(queryWord, k), true, true);
+  int posTag;
+  while (std::cin >> queryWord >> posTag) {
+    printPredictions(fasttext.getNN(queryWord, posTag, k), true, true);
     std::cout << prompt;
   }
   exit(0);
@@ -419,6 +430,45 @@ void dump(const std::vector<std::string>& args) {
   }
 }
 
+void createDict(const std::vector<std::string>& args){
+
+  auto pa = std::make_shared<Args>(Args());
+  pa->parseArgs(args);
+
+
+  std::ifstream ifs(pa->input);
+  if (!ifs.is_open())
+    throw std::runtime_error("Failed to open " + pa->input);
+
+  Dictionary d(pa);
+  d.readFromFile(ifs);
+
+  std::ofstream ofs(pa->output);
+  if (!ofs.is_open()) {
+    throw std::invalid_argument(
+        pa->output + " cannot be opened for saving vectors!");
+  }
+  d.save(ofs);
+
+}
+
+void dumpDict(const std::vector<std::string>& args){
+
+  if(args.size() < 3){
+    printDumpDictUsage();
+    exit(EXIT_FAILURE);
+  }
+  std::string path = args[2];
+
+  std::ifstream ifs(path);
+  if (!ifs.is_open())
+    throw std::runtime_error("Failed to open " + path);
+
+  auto pa = std::make_shared<Args>(Args());
+  Dictionary d(pa, ifs);
+  d.dump(std::cout);
+}
+
 int main(int argc, char** argv) {
   std::vector<std::string> args(argv, argv + argc);
   if (args.size() < 2) {
@@ -426,7 +476,8 @@ int main(int argc, char** argv) {
     exit(EXIT_FAILURE);
   }
   std::string command(args[1]);
-  if (command == "skipgram" || command == "cbow" || command == "supervised") {
+  if (command == "skipgram" || command == "syntax_skipgram" ||
+      command == "cbow" || command == "supervised") {
     train(args);
   } else if (command == "test" || command == "test-label") {
     test(args);
@@ -446,6 +497,10 @@ int main(int argc, char** argv) {
     predict(args);
   } else if (command == "dump") {
     dump(args);
+  } else if (command == "create_dict"){
+    createDict(args);
+  } else if (command == "dump_dict"){
+    dumpDict(args);
   } else {
     printUsage();
     exit(EXIT_FAILURE);

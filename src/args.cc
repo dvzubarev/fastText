@@ -28,7 +28,7 @@ Args::Args() {
   wordNgrams = 1;
   loss = loss_name::ns;
   model = model_name::sg;
-  bucket = 2000000;
+  bucket = 6000000;
   minn = 3;
   maxn = 6;
   thread = 12;
@@ -116,7 +116,8 @@ void Args::parseArgs(const std::vector<std::string>& args) {
     lr = 0.1;
   } else if (command == "cbow") {
     model = model_name::cbow;
-  }
+  } else if (command == "syntax_skipgram")
+    model = model_name::syntax_sg;
   for (int ai = 2; ai < args.size(); ai += 2) {
     if (args[ai][0] != '-') {
       std::cerr << "Provided argument without a dash! Usage:" << std::endl;
@@ -132,7 +133,11 @@ void Args::parseArgs(const std::vector<std::string>& args) {
         exit(EXIT_FAILURE);
       } else if (args[ai] == "-input") {
         input = std::string(args.at(ai + 1));
-      } else if (args[ai] == "-output") {
+      } else if (args[ai] == "-dic") {
+        dicPath = std::string(args.at(ai + 1));
+      }else if (args[ai] == "-codes") {
+        bpeCodesPath = std::string(args.at(ai + 1));
+      }else if (args[ai] == "-output") {
         output = std::string(args.at(ai + 1));
       } else if (args[ai] == "-lr") {
         lr = std::stof(args.at(ai + 1));
@@ -213,6 +218,8 @@ void Args::parseArgs(const std::vector<std::string>& args) {
         autotuneDuration = std::stoi(args.at(ai + 1));
       } else if (args[ai] == "-autotune-modelsize") {
         autotuneModelSize = std::string(args.at(ai + 1));
+      } else if (args[ai] == "-bpe-codes"){
+        bpeCodesPath = std::string(args.at(ai + 1));
       } else {
         std::cerr << "Unknown argument: " << args[ai] << std::endl;
         printHelp();
@@ -245,6 +252,7 @@ void Args::printHelp() {
 void Args::printBasicHelp() {
   std::cerr << "\nThe following arguments are mandatory:\n"
             << "  -input              training file path\n"
+            << "  -dic                dictionary file path\n"
             << "  -output             output file path\n"
             << "\nThe following arguments are optional:\n"
             << "  -verbose            verbosity level [" << verbose << "]\n";

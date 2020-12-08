@@ -13,9 +13,15 @@ project(fasttext)
 set (fasttext_VERSION_MAJOR 0)
 set (fasttext_VERSION_MINOR 1)
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+find_package(FastBPE CONFIG REQUIRED)
+find_package(RapidJSON CONFIG REQUIRED)
+
 include_directories(fasttext)
 
-set(CMAKE_CXX_FLAGS " -pthread -std=c++11 -funroll-loops -O3 -march=native")
+# set(CMAKE_CXX_FLAGS " -pthread -std=c++11 -funroll-loops -O3 -march=native")
 
 set(HEADER_FILES
     src/args.h
@@ -31,7 +37,8 @@ set(HEADER_FILES
     src/quantmatrix.h
     src/real.h
     src/utils.h
-    src/vector.h)
+    src/vector.h
+    src/sent.h)
 
 set(SOURCE_FILES
     src/args.cc
@@ -47,7 +54,8 @@ set(SOURCE_FILES
     src/productquantizer.cc
     src/quantmatrix.cc
     src/utils.cc
-    src/vector.cc)
+    src/vector.cc
+    src/sent.cc)
 
 
 if (NOT MSVC)
@@ -56,8 +64,13 @@ if (NOT MSVC)
   install(FILES "${CMAKE_BINARY_DIR}/fasttext.pc" DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 endif()
 
+set(DEPS FastBPE::fastbpe)
+set(INCLUDES ${RAPIDJSON_INCLUDE_DIRS})
 add_library(fasttext-shared SHARED ${SOURCE_FILES} ${HEADER_FILES})
+target_link_libraries(fasttext-shared ${DEPS})
+target_include_directories(fasttext-shared PRIVATE ${INCLUDES})
 add_library(fasttext-static STATIC ${SOURCE_FILES} ${HEADER_FILES})
+target_link_libraries(fasttext-static ${DEPS})
 add_library(fasttext-static_pic STATIC ${SOURCE_FILES} ${HEADER_FILES})
 set_target_properties(fasttext-shared PROPERTIES OUTPUT_NAME fasttext
   SOVERSION "${fasttext_VERSION_MAJOR}")
@@ -76,3 +89,7 @@ install (TARGETS fasttext-static_pic
 install (TARGETS fasttext-bin
     RUNTIME DESTINATION bin
  PUBLIC_HEADER DESTINATION include/fasttext)
+
+add_executable(temp src/sent.cc)
+target_link_libraries(temp ${DEPS})
+target_include_directories(temp PRIVATE ${INCLUDES})

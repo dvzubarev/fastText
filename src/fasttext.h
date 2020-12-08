@@ -37,6 +37,8 @@ class FastText {
       std::function<void(float, float, double, double, int64_t)>;
 
  protected:
+  using words_array_t = compact_sent_t::words_array_t;
+
   std::shared_ptr<Args> args_;
   std::shared_ptr<Dictionary> dict_;
   std::shared_ptr<Matrix> input_;
@@ -74,6 +76,17 @@ class FastText {
       const std::vector<int32_t>& labels);
   void cbow(Model::State& state, real lr, const std::vector<int32_t>& line);
   void skipgram(Model::State& state, real lr, const std::vector<int32_t>& line);
+  void syntax_skipgram(Model::State& state, real lr, const compact_line_t& line);
+  void updateWordsModel(Model::State& state, real lr,
+                        const words_array_t& words);
+  void updatePhraseModel(Model::State& state, real lr,
+                         const words_array_t& phrases);
+  template<class Func>
+  void callOnChilds(const words_array_t& words, int32_t head_pos, const Func& func);
+  template<class Func>
+  void callOnAllSiblings(const words_array_t& words, int32_t head_pos, const Func& func);
+  template<class Func>
+  void callOnHeads(const words_array_t& words, int32_t mod_pos, const Func& func);
   std::vector<int32_t> selectEmbeddings(int32_t cutoff) const;
   void precomputeWordVectors(DenseMatrix& wordVectors);
   bool keepTraining(const int64_t ntokens) const;
@@ -89,7 +102,8 @@ class FastText {
 
   int32_t getLabelId(const std::string& label) const;
 
-  void getWordVector(Vector& vec, const std::string& word) const;
+  void getWordVector(Vector& vec, const std::string& word, uint8_t pos_tag = 0) const;
+  void getWordVector(Vector& vec, int32_t i) const;
 
   void getSubwordVector(Vector& vec, const std::string& subword) const;
 
@@ -146,6 +160,7 @@ class FastText {
 
   std::vector<std::pair<real, std::string>> getNN(
       const std::string& word,
+      int posTag,
       int32_t k);
 
   std::vector<std::pair<real, std::string>> getAnalogies(
