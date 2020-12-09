@@ -69,6 +69,11 @@ struct compact_sent_t{
   words_array_t phrases;
 };
 
+struct other_compact_sent_t : public compact_sent_t{
+  std::vector<int16_t>  mapping_to_target_words;
+  std::vector<int16_t>  mapping_to_target_phrases;
+};
+
 struct line_t{
   void reset();
 
@@ -80,11 +85,12 @@ struct compact_line_t{
   void reset();
 
   compact_sent_t target;
-  std::vector<compact_sent_t> other_langs;
+  std::vector<other_compact_sent_t> other_langs;
 
 };
 
 void make_aux_offs(compact_line_t& line);
+void fill_other_mapping(compact_line_t& line);
 
 
 bool contains(const std::vector<compact_word_t>& words, int32_t num);

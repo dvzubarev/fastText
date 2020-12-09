@@ -432,17 +432,18 @@ void FastText::skipgram(
 }
 
 void FastText::syntax_skipgram(Model::State& state, real lr, const compact_line_t& line){
-  updateWordsModel(state, lr, line.target.words);
-  updatePhraseModel(state, lr, line.target.phrases);
+  updateModelOnWords(state, lr, line.target.words);
+  updateModelOnPhrases(state, lr, line.target.phrases);
   for (const auto& os : line.other_langs){
-    updateWordsModel(state, lr, os.words);
-    updatePhraseModel(state, lr, os.phrases);
-    //TODO map other sent to target
+    updateModelOnWords(state, lr, os.words);
+    mapOtherLangToTarget(state, lr, line.target.words, os.words, os.mapping_to_target_words);
+    updateModelOnPhrases(state, lr, os.phrases);
+    mapOtherLangToTarget(state, lr, line.target.phrases, os.phrases, os.mapping_to_target_phrases);
   }
 }
 
-void FastText::updateWordsModel(Model::State& state, real lr,
-                                const words_array_t& words){
+void FastText::updateModelOnWords(Model::State& state, real lr,
+                                  const words_array_t& words){
 
   for (int32_t w = 0; w < words.size(); w++) {
     if( words[w].num == -1 )
@@ -459,9 +460,8 @@ void FastText::updateWordsModel(Model::State& state, real lr,
   }
 }
 void
-FastText::
-updatePhraseModel(Model::State& state, real lr,
-                  const words_array_t& phrases){
+FastText::updateModelOnPhrases(Model::State& state, real lr,
+                               const words_array_t& phrases){
 
   for (int32_t w = 0; w < phrases.size(); w++) {
     if(not phrases[w].is_phrase or phrases[w].num == -1 )
@@ -483,6 +483,33 @@ updatePhraseModel(Model::State& state, real lr,
     std::copy(std::begin(feats)+1, std::end(feats), std::begin(only_words));
     model_->update(only_words, phrases, w, lr, state);
   }
+}
+
+void
+FastText::
+mapOtherLangToTarget(Model::State& state, real lr,
+                     const words_array_t& target_sent, const words_array_t& other_sent,
+                     const std::vector<int16_t>& mapping){
+  for(int i=0;i<other_sent.size();++i){
+    if (other_sent[i].num == -1)
+      continue;
+
+    auto target_pos = mapping[i];
+    if(target_pos == -1 or target_sent[target_pos].num == -1)
+      continue;
+
+    const std::vector<int32_t>& feats = dict_->getSubwords(other_sent[i].num);
+
+    auto update_func = [&](int32_t pos){
+      model_->update(feats, target_sent, pos, lr, state);
+    };
+    update_func(target_pos);
+
+    callOnAllSiblings(target_sent, target_pos, update_func);
+    callOnChilds(target_sent, target_pos, update_func);
+    callOnHeads(target_sent, target_pos, update_func);
+  }
+
 }
 
 
@@ -748,7 +775,7 @@ std::vector<std::pair<real, std::string>> FastText::getNN(
     queryNorm = 1;
   }
 
-  for (int32_t i = 0; i < dict_->nwords(); i++) {
+  for (int32_t i = 0; i < dict_->size(); i++) {
     std::string word = dict_->getWord(i);
     if (banSet.find(word) == banSet.end()) {
       real dp = wordVectors.dotRow(query, i);

@@ -559,6 +559,7 @@ int32_t Dictionary::getLine(std::istream& in,
   };
   parse_from_json(json, get_id_func, line);
   make_aux_offs(line);
+  fill_other_mapping(line);
 
   //TODO impl discard
   auto fin_sent = [&ntokens](const compact_sent_t& s){

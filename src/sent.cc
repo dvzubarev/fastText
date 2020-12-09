@@ -1,5 +1,6 @@
 #include "sent.h"
 
+#include <numeric>
 
 
 namespace fasttext {
@@ -65,5 +66,23 @@ void make_aux_offs(compact_line_t& line){
     make_aux_offs(s.phrases);
   }
 }
+
+void fill_other_mapping_impl(const std::vector<compact_word_t>& target,
+                             const std::vector<compact_word_t>& other,
+                             std::vector<int16_t>& mapping){
+  mapping.resize(other.size(), -1);
+  auto sz = std::min(other.size(), target.size());
+  std::iota(mapping.begin(), mapping.begin() + sz, 0);
+  std::random_shuffle(mapping.begin(), mapping.begin() + sz);
+}
+
+void fill_other_mapping(compact_line_t& line){
+
+  for(auto& s : line.other_langs){
+    fill_other_mapping_impl(line.target.words, s.words, s.mapping_to_target_words);
+    fill_other_mapping_impl(line.target.phrases, s.phrases, s.mapping_to_target_phrases);
+  }
+}
+
 
 }

@@ -77,10 +77,13 @@ class FastText {
   void cbow(Model::State& state, real lr, const std::vector<int32_t>& line);
   void skipgram(Model::State& state, real lr, const std::vector<int32_t>& line);
   void syntax_skipgram(Model::State& state, real lr, const compact_line_t& line);
-  void updateWordsModel(Model::State& state, real lr,
+  void updateModelOnWords(Model::State& state, real lr,
                         const words_array_t& words);
-  void updatePhraseModel(Model::State& state, real lr,
+  void updateModelOnPhrases(Model::State& state, real lr,
                          const words_array_t& phrases);
+  void mapOtherLangToTarget(Model::State& state, real lr,
+                            const words_array_t& target, const words_array_t& other,
+                            const std::vector<int16_t>& mapping);
   template<class Func>
   void callOnChilds(const words_array_t& words, int32_t head_pos, const Func& func);
   template<class Func>

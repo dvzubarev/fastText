@@ -32,7 +32,7 @@ Args::Args() {
   minn = 3;
   maxn = 6;
   thread = 12;
-  lrUpdateRate = 100;
+  lrUpdateRate = 300;
   t = 1e-4;
   label = "__label__";
   verbose = 2;
