@@ -47,6 +47,7 @@ Dictionary::Dictionary(std::shared_ptr<Args> args, std::istream& in)
       nlabels_(0),
       ntokens_(0),
       pruneidx_size_(-1){
+  encoder_.reset(new fastBPE::Encoder());
   load(in);
 }
 
@@ -238,6 +239,10 @@ std::string Dictionary::getWord(int32_t id) const {
   assert(id < size_);
   return words_[id].word;
 }
+int Dictionary::getPoS(uint32_t id) const{
+  return words_[id].pos_tag;
+}
+
 
 // The correct implementation of fnv should be:
 // h = h ^ uint32_t(uint8_t(str[i]));
@@ -268,20 +273,20 @@ void Dictionary::computeSubwords(
     const std::string& word,
     std::vector<int32_t>& ngrams,
     std::vector<std::string>* substrings) const {
-  // auto subwords = encoder_->apply(word);
+  auto subwords = extractSubwords(word);
+  for(const auto& subword : subwords){
+    auto id = find(subword);
+    if (word2int_[id] == -1)
+      continue;
+    ngrams.push_back(word2int_[id]);
+  }
 
-  // for(const auto& subword : subwords){
-  //   //TODO
-  //   // auto h = add_subword(subword);
-  //   // ngrams.push_back(h);
-  // }
-
-  // if(substrings)
-  //   *substrings = std::move(subwords);
+  if(substrings)
+    *substrings = std::move(subwords);
 }
 
 std::vector<std::string>
-Dictionary::extractSubwords(const std::string& s){
+Dictionary::extractSubwords(const std::string& s)const{
   auto variants = encoder_->apply(s, 3);
   return fastBPE::uniq_subwords(variants, 3);
 }
@@ -656,6 +661,8 @@ void Dictionary::save(std::ostream& out) const {
     out.write((char*)&(pair.first), sizeof(int32_t));
     out.write((char*)&(pair.second), sizeof(int32_t));
   }
+  encoder_->save(out);
+
 }
 
 void Dictionary::load(std::istream& in) {
@@ -696,6 +703,8 @@ void Dictionary::load(std::istream& in) {
     in.read((char*)&second, sizeof(int32_t));
     pruneidx_[first] = second;
   }
+  encoder_->load(in);
+
   initTableDiscard();
 
   word2int_.assign(MAX_VOCAB_SIZE, -1);

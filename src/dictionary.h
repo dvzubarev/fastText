@@ -53,7 +53,7 @@ class Dictionary {
   void initNgrams();
   void initSubwords();
   std::vector<std::string>
-  extractSubwords(const std::string& s);
+  extractSubwords(const std::string& s)const;
   void reset(std::istream&) const;
   void pushHash(std::vector<int32_t>&, int32_t) const;
   void addSubwords(std::vector<int32_t>&, const std::string&, int32_t) const;
@@ -95,6 +95,7 @@ class Dictionary {
   int32_t getId(const std::string&, uint32_t h) const;
   entry_type getType(int32_t) const;
   entry_type getType(const std::string&) const;
+  int getPoS(uint32_t) const;
   bool discard(int32_t, real) const;
   std::string getWord(int32_t) const;
   const std::vector<int32_t>& getSubwords(int32_t) const;

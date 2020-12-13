@@ -11,6 +11,8 @@
 #include "quantmatrix.h"
 #include "lp.h"
 
+#include <boost/format.hpp>
+
 #include <algorithm>
 #include <iomanip>
 #include <iostream>
@@ -784,7 +786,9 @@ std::vector<std::pair<real, std::string>> FastText::getNN(
       if (heap.size() == k && similarity < heap.front().first) {
         continue;
       }
-      heap.push_back(std::make_pair(similarity, word));
+
+      auto fmt = boost::format("%s %s_%s")% (int)dict_->getType(i) % word % dict_->getPoS(i);
+      heap.push_back(std::make_pair(similarity, str(fmt)));
       std::push_heap(heap.begin(), heap.end(), comparePairs);
       if (heap.size() > k) {
         std::pop_heap(heap.begin(), heap.end(), comparePairs);
