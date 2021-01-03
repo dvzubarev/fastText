@@ -26,11 +26,23 @@
 namespace fasttext {
 
 typedef int32_t id_type;
-enum class entry_type : int8_t {
-  word = 0,
-  label = 1,
-  subword = 2,
-  phrase = 3};
+enum class entry_type : uint8_t {
+  word = 1,
+  label = 2,
+  phrase = 4,
+  kbconcept = 8,
+  subword = 16,
+  all = 255
+  };
+
+inline bool contains(entry_type e, entry_type t){
+  return (static_cast<uint32_t>(e) & static_cast<uint32_t>(t)) != 0;
+}
+template<class... EntryTypes>
+inline entry_type combine(EntryTypes... rest){
+  auto t = ( ... | static_cast<uint32_t>(rest) );
+  return entry_type{t};
+}
 
 struct entry {
   std::string word;
@@ -40,6 +52,7 @@ struct entry {
   entry_type type;
   uint8_t pos_tag;
 };
+
 
 class Dictionary {
  protected:
@@ -68,6 +81,7 @@ class Dictionary {
   int32_t nlabels_;
   int32_t nsubwords_;
   int32_t nphrases_;
+  int32_t nkbconcepts_;
   int64_t ntokens_;
 
   int64_t pruneidx_size_;
@@ -87,7 +101,7 @@ class Dictionary {
 
   explicit Dictionary(std::shared_ptr<Args>);
   explicit Dictionary(std::shared_ptr<Args>, std::istream&);
-  int32_t size() const;
+  int32_t size(entry_type types = entry_type::all) const;
   int32_t nwords() const;
   int32_t nlabels() const;
   int64_t ntokens() const;

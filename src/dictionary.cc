@@ -35,6 +35,7 @@ Dictionary::Dictionary(std::shared_ptr<Args> args)
       nlabels_(0),
       nsubwords_(0),
       nphrases_(0),
+      nkbconcepts_(0),
       ntokens_(0),
       pruneidx_size_(-1){
   encoder_.reset(new fastBPE::Encoder(args->bpeCodesPath, true));
@@ -45,6 +46,9 @@ Dictionary::Dictionary(std::shared_ptr<Args> args, std::istream& in)
       size_(0),
       nwords_(0),
       nlabels_(0),
+      nsubwords_(0),
+      nphrases_(0),
+      nkbconcepts_(0),
       ntokens_(0),
       pruneidx_size_(-1){
   encoder_.reset(new fastBPE::Encoder());
@@ -154,9 +158,22 @@ std::pair<uint32_t, int32_t> Dictionary::addSubword(const std::string& word) {
   return std::pair(h, pos);
 }
 
-int32_t Dictionary::size() const {
-  return nwords_ + nphrases_ + nsubwords_;
+int32_t Dictionary::size(entry_type types) const {
+  int32_t sz = 0;
+  if (contains(types, entry_type::word))
+    sz += nwords_;
+  if (contains(types, entry_type::phrase))
+    sz += nphrases_;
+  if (contains(types, entry_type::label))
+    sz += nlabels_;
+  if (contains(types, entry_type::kbconcept))
+    sz += nkbconcepts_;
+  if (contains(types, entry_type::subword))
+    sz += nsubwords_;
+  return sz;
 }
+
+
 
 int32_t Dictionary::nwords() const {
   return nwords_;
@@ -470,7 +487,7 @@ void Dictionary::initTableDiscard() {
 std::vector<int64_t> Dictionary::getCounts(entry_type type) const {
   std::vector<int64_t> counts;
   for (auto& w : words_) {
-    if (w.type == type) {
+    if (contains(type, w.type)) {
       counts.push_back(w.count);
     }
   }

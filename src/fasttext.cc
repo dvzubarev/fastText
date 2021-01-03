@@ -170,8 +170,7 @@ void FastText::saveOutput(const std::string& filename) {
     throw std::invalid_argument(
         "Option -saveOutput is not supported for quantized models.");
   }
-  int32_t n =
-      (args_->model == model_name::sup) ? dict_->nlabels() : dict_->nwords();
+  int32_t n = output_->size(0);
   ofs << n << " " << args_->dim << std::endl;
   Vector vec(args_->dim);
   for (int32_t i = 0; i < n; i++) {
@@ -241,7 +240,7 @@ std::vector<int64_t> FastText::getTargetCounts() const {
   if (args_->model == model_name::sup) {
     return dict_->getCounts(entry_type::label);
   } else {
-    return dict_->getCounts(entry_type::word);
+    return dict_->getCounts(combine(entry_type::word, entry_type::phrase));
   }
 }
 
@@ -962,7 +961,9 @@ std::shared_ptr<Matrix> FastText::createRandomMatrix() const {
 
 std::shared_ptr<Matrix> FastText::createTrainOutputMatrix() const {
   int64_t m =
-      (args_->model == model_name::sup) ? dict_->nlabels() : dict_->nwords();
+    (args_->model == model_name::sup) ? dict_->nlabels() :
+    dict_->size(combine(entry_type::word, entry_type::phrase));
+  std::cerr<<"Creaing train output martrix - sz: "<<m<<" dim: "<<args_->dim<<std::endl;
   std::shared_ptr<DenseMatrix> output =
       std::make_shared<DenseMatrix>(m, args_->dim);
   output->zero();
@@ -997,6 +998,7 @@ void FastText::train(const Args& args, const TrainCallback& callback) {
     input_ = getInputMatrixFromFile(args_->pretrainedVectors);
   } else {
     input_ = createRandomMatrix();
+    std::cerr<<"Create input matrix - size: "<<input_->size(0)<<" dim: "<<input_->size(1)<<std::endl;
   }
   output_ = createTrainOutputMatrix();
   quant_ = false;
