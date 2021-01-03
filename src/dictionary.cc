@@ -184,7 +184,7 @@ const std::vector<int32_t> Dictionary::getSubwords(
   }
   std::vector<int32_t> ngrams;
   if (word != EOS) {
-    computeSubwords(BOW + word + EOW, ngrams);
+    computeSubwords(word, ngrams);
   }
   return ngrams;
 }
@@ -201,7 +201,7 @@ void Dictionary::getSubwords(
     substrings.push_back(words_[i].word);
   }
   if (word != EOS) {
-    computeSubwords(BOW + word + EOW, ngrams, &substrings);
+    computeSubwords(word, ngrams, &substrings);
   }
 }
 

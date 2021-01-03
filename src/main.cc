@@ -14,6 +14,9 @@
 #include "autotune.h"
 #include "fasttext.h"
 
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/classification.hpp>
+
 using namespace fasttext;
 
 void printUsage() {
@@ -117,6 +120,14 @@ void printNNUsage() {
   std::cout << "usage: fasttext nn <model> <k>\n\n"
             << "  <model>      model filename\n"
             << "  <k>          (optional; 10 by default) predict top k labels\n"
+            << std::endl;
+}
+
+void printCompareUsage() {
+  std::cout << "usage: fasttext compare <model> <input file> <output file>\n\n"
+            << "  <model>      model filename\n"
+            << "  <input file>  file with word pairs \n"
+            << "  <output file>  output file with word pairs and sim \n"
             << std::endl;
 }
 
@@ -469,6 +480,58 @@ void dumpDict(const std::vector<std::string>& args){
   d.dump(std::cout);
 }
 
+void CompareWords(const std::vector<std::string>& args){
+  int32_t k;
+  if (args.size() != 5) {
+    printCompareUsage();
+    exit(EXIT_FAILURE);
+  }
+  FastText fasttext;
+  fasttext.loadModel(std::string(args[2]));
+  std::ifstream in(args[3]);
+  if (!in.is_open())
+    throw std::runtime_error("Failed to open " + std::string(args[3]));
+
+  std::ofstream out(args[4]);
+  if (!out.is_open())
+    throw std::runtime_error("Failed to open " + std::string(args[4]));
+
+  std::string line;
+  //skip header
+  std::getline(in, line);
+  uint32_t oov_cnt = 0;
+  while(std::getline(in, line)){
+    std::vector<std::string> parts;
+    boost::algorithm::split(parts, line, boost::algorithm::is_any_of(","));
+    if (parts.size() != 5)
+      throw std::runtime_error("Failed to split string");
+    uint8_t pos_tag;
+    if (parts[3] == "nouns")
+      pos_tag = 2;
+    else if (parts[3] == "verbs")
+      pos_tag = 1;
+    else if (parts[3] == "adjectives")
+      pos_tag = 3;
+    else if (parts[3] == "adverbs")
+      pos_tag = 13;
+    else
+      throw std::runtime_error("Unknown pos_tag " + parts[3]);
+
+    float sim = fasttext.compareWords(parts[1], pos_tag, parts[2], pos_tag);
+    if (std::isnan(sim)){
+      ++oov_cnt;
+      sim = 0;
+    }
+
+    out<<parts[0]<<','<<parts[1]<<','<<parts[2]<<','<<sim<<'\n';
+  }
+  std::cout<<"Count of OOV words "<<oov_cnt<<std::endl;
+  out.close();
+
+  exit(0);
+
+}
+
 int main(int argc, char** argv) {
   std::vector<std::string> args(argv, argv + argc);
   if (args.size() < 2) {
@@ -501,6 +564,8 @@ int main(int argc, char** argv) {
     createDict(args);
   } else if (command == "dump_dict"){
     dumpDict(args);
+  } else if (command == "compare"){
+    CompareWords(args);
   } else {
     printUsage();
     exit(EXIT_FAILURE);

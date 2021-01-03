@@ -111,19 +111,19 @@ int32_t FastText::getLabelId(const std::string& label) const {
   return labelId;
 }
 
-void FastText::getWordVector(Vector& vec, int32_t i) const {
+bool FastText::getWordVector(Vector& vec, int32_t i) const {
   const std::vector<int32_t>& ngrams = dict_->getSubwords(i);
-  vec.zero();
-  for (int i = 0; i < ngrams.size(); i++) {
-    addInputVector(vec, ngrams[i]);
-  }
-  if (ngrams.size() > 0) {
-    vec.mul(1.0 / ngrams.size());
-  }
+  return getWordVector(vec, ngrams);
 }
 
-void FastText::getWordVector(Vector& vec, const std::string& word, uint8_t pos_tag) const {
+bool FastText::getWordVector(Vector& vec, const std::string& word, uint8_t pos_tag) const {
   const std::vector<int32_t>& ngrams = dict_->getSubwords(word, pos_tag);
+  return getWordVector(vec, ngrams);
+}
+
+bool FastText::getWordVector(Vector& vec, const std::vector<int32_t>& ngrams)const{
+  if (ngrams.size()==0)
+    return false;
   vec.zero();
   for (int i = 0; i < ngrams.size(); i++) {
     addInputVector(vec, ngrams[i]);
@@ -131,6 +131,7 @@ void FastText::getWordVector(Vector& vec, const std::string& word, uint8_t pos_t
   if (ngrams.size() > 0) {
     vec.mul(1.0 / ngrams.size());
   }
+  return true;
 }
 
 void FastText::getSubwordVector(Vector& vec, const std::string& subword) const {
@@ -799,6 +800,26 @@ std::vector<std::pair<real, std::string>> FastText::getNN(
   std::sort_heap(heap.begin(), heap.end(), comparePairs);
 
   return heap;
+}
+
+real FastText::compareWords(const std::string& word1, int posTag1,
+                             const std::string& word2, int posTag2){
+  Vector query(args_->dim);
+  if(not getWordVector(query, word1, posTag1))
+    return NAN;
+  real qnorm = query.norm();
+
+
+  Vector other(args_->dim);
+  if(not getWordVector(other, word2, posTag2))
+    return NAN;
+  real onorm = other.norm();
+
+  real dot = 0.;
+  for(int i=0;i<args_->dim;++i)
+    dot += query[i] * other[i];
+
+  return dot/qnorm/onorm;
 }
 
 std::vector<std::pair<real, std::string>> FastText::getAnalogies(

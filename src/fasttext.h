@@ -105,8 +105,9 @@ class FastText {
 
   int32_t getLabelId(const std::string& label) const;
 
-  void getWordVector(Vector& vec, const std::string& word, uint8_t pos_tag = 0) const;
-  void getWordVector(Vector& vec, int32_t i) const;
+  bool getWordVector(Vector& vec, const std::string& word, uint8_t pos_tag = 0) const;
+  bool getWordVector(Vector& vec, int32_t i) const;
+  bool getWordVector(Vector& vec, const std::vector<int32_t>& ngrams) const;
 
   void getSubwordVector(Vector& vec, const std::string& subword) const;
 
@@ -165,6 +166,12 @@ class FastText {
       const std::string& word,
       int posTag,
       int32_t k);
+
+  real compareWords(
+    const std::string& word1,
+    int posTag1,
+    const std::string& word2,
+    int posTag2);
 
   std::vector<std::pair<real, std::string>> getAnalogies(
       int32_t k,
