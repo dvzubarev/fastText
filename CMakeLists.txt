@@ -90,6 +90,6 @@ install (TARGETS fasttext-bin
     RUNTIME DESTINATION bin
  PUBLIC_HEADER DESTINATION include/fasttext)
 
-add_executable(temp src/sent.cc)
-target_link_libraries(temp ${DEPS})
-target_include_directories(temp PRIVATE ${INCLUDES})
+add_executable(json_parser_cli src/json_parser_cli.cc src/sent.cc)
+target_link_libraries(json_parser_cli ${DEPS})
+target_include_directories(json_parser_cli PRIVATE ${INCLUDES})

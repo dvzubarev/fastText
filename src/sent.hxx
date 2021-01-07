@@ -25,23 +25,28 @@ template<class Impl, class Traits>
 struct base_line_handler_t : public rapidjson::BaseReaderHandler<utf_traits_t,
                                                                  base_line_handler_t<Impl, Traits>> {
   static constexpr size_t SENT_SIZE_HINT = 50;
+  static constexpr size_t CONCEPTS_SIZE_HINT = 5;
   using sz_t = rapidjson::SizeType;
   enum state : int{
     sLineObjBegin,
     sLineObj,
     sSentObj,
+    sOtherSentObjBegin,
+    sOtherSentObj,
     sWordsArrBegin,
     sWordObjBegin,
     sPhrasesArrBegin,
     sPhraseObjBegin,
+    sConceptsArr,
     sComponent,
     sWordObj,
     sWordStrVal,
     sWordPosTagVal,
     sWordParentOffsVal,
     sWordSyntRelVal,
-    sSentArr,
-    sSentObjBegin
+    sOtherSentArr,
+    sWordsMappingArr,
+    sPhrasesMappingArr,
   };
   union val_t{
     bool b;
@@ -99,7 +104,7 @@ struct base_line_handler_t : public rapidjson::BaseReaderHandler<utf_traits_t,
     }
     if(mem_equal("other_langs", 11u, key_, sz_)){
       target_sent_ = false;
-      state_ = sSentArr;
+      state_ = sOtherSentArr;
       return true;
     }
 
@@ -117,10 +122,38 @@ struct base_line_handler_t : public rapidjson::BaseReaderHandler<utf_traits_t,
       state_ = sPhrasesArrBegin;
       return true;
     }
+    if (mem_equal("concepts", 8u, key_, sz_)){
+      state_ = sConceptsArr;
+      return true;
+    }
+
     err_ = "Unknown sent obj key: ";
     err_.append(key_, sz_);
     return false;
   }
+
+  inline bool on_other_sent_obj(){
+    // return on_sent_obj();
+    if(on_sent_obj())
+      return true;
+
+    err_ = "";
+
+    if (mem_equal("words_mapping", 13u, key_, sz_)){
+      state_ = sWordsMappingArr;
+      return true;
+    }
+
+    if (mem_equal("phrases_mapping", 15u, key_, sz_)){
+      state_ = sPhrasesMappingArr;
+      return true;
+    }
+
+    err_ = "Unknown other sent obj key: ";
+    err_.append(key_, sz_);
+    return false;
+  }
+
   inline bool on_words_arr_begin(){
     sent_->words.reserve(SENT_SIZE_HINT);
     state_ = sWordObjBegin;
@@ -196,11 +229,30 @@ struct base_line_handler_t : public rapidjson::BaseReaderHandler<utf_traits_t,
   inline bool on_component_val(){
     return _impl().set_component();
   }
+  inline bool on_concepts_begin(){
+    return _impl().concepts_begin();
+  }
+  inline bool on_concept_val(){
+    return _impl().set_concept();
+  }
 
-  inline bool on_sent_obj_begin(){
+  inline bool on_words_mapping_begin(){
+    return _impl().words_mapping_begin();
+  }
+  inline bool on_words_mapping_val(){
+    return _impl().set_words_mapping();
+  }
+  inline bool on_phrases_mapping_begin(){
+    return _impl().phrases_mapping_begin();
+  }
+  inline bool on_phrases_mapping_val(){
+    return _impl().set_phrases_mapping();
+  }
+
+  inline bool on_other_sent_obj_begin(){
     line_->other_langs.emplace_back();
     sent_ = &line_->other_langs.back();
-    state_ = sSentObj;
+    state_ = sOtherSentObj;
     return true;
   }
 
@@ -208,12 +260,16 @@ struct base_line_handler_t : public rapidjson::BaseReaderHandler<utf_traits_t,
     switch(state_){
     case sLineObj: return on_line_obj();
     case sSentObj: return on_sent_obj();
+    case sOtherSentObj: return on_other_sent_obj();
+    case sConceptsArr: return on_concept_val();
+    case sComponent: return on_component_val();
     case sWordObj: return on_word_obj();
     case sWordStrVal: return on_word_str_val();
     case sWordPosTagVal: return on_word_pos_tag_val();
     case sWordParentOffsVal: return on_word_parent_offs_val();
     case sWordSyntRelVal: return on_word_synt_rel_val();
-    case sComponent: return on_component_val();
+    case sWordsMappingArr: return on_words_mapping_val();
+    case sPhrasesMappingArr: return on_phrases_mapping_val();
     default: {
       err_ = "Unknown state in handle state " + std::to_string(state_) ;
       return false;
@@ -258,11 +314,11 @@ struct base_line_handler_t : public rapidjson::BaseReaderHandler<utf_traits_t,
   bool StartObject() {
     switch(state_){
     case sLineObjBegin: return on_line_obj_begin();
-    //skip target obj opening
     case sSentObj: return true;
+    case sOtherSentObjBegin: return on_other_sent_obj_begin();
+    case sOtherSentObj: return true;
     case sWordObjBegin: return on_word_obj_begin();
     case sPhraseObjBegin: return on_phrase_obj_begin();
-    case sSentObjBegin: return on_sent_obj_begin();
     default: {
       err_ = "Unknown state in startObject " + std::to_string(state_);
       return false;
@@ -280,8 +336,10 @@ struct base_line_handler_t : public rapidjson::BaseReaderHandler<utf_traits_t,
   bool EndObject(sz_t memberCount) {
 
     switch(state_){
-    case sSentObj: {
-      state_ = target_sent_ ? sLineObj : sSentObjBegin;
+    case sLineObj: return true;
+    case sSentObj:
+    case sOtherSentObj: {
+      state_ = target_sent_ ? sLineObj : sOtherSentObjBegin;
       return true;
 
     }
@@ -292,7 +350,6 @@ struct base_line_handler_t : public rapidjson::BaseReaderHandler<utf_traits_t,
       phrase_ = nullptr;
       return ret;
     }
-    case sLineObj: return true;
     default: {
       err_ = "Unknown state in EndObject " + std::to_string(state_) ;
       return false;
@@ -303,8 +360,11 @@ struct base_line_handler_t : public rapidjson::BaseReaderHandler<utf_traits_t,
     switch(state_){
     case sWordsArrBegin: return on_words_arr_begin();
     case sPhrasesArrBegin: return on_phrase_arr_begin();
+    case sConceptsArr: return on_concepts_begin();
     case sComponent: return on_components_begin();
-    case sSentArr: state_ = sSentObjBegin; return true;
+    case sWordsMappingArr: return on_words_mapping_begin();
+    case sPhrasesMappingArr: return on_phrases_mapping_begin();
+    case sOtherSentArr: state_ = sOtherSentObjBegin; return true;
     default : {
       err_ = "Unknown state in Start array " + std::to_string(state_) ;
       return false;
@@ -314,10 +374,13 @@ struct base_line_handler_t : public rapidjson::BaseReaderHandler<utf_traits_t,
   }
   bool EndArray(sz_t elementCount) {
     switch(state_){
+    case sOtherSentObjBegin: state_ = sLineObj; return true;
     case sWordObjBegin:
-    case sPhraseObjBegin: state_ = sSentObj; return true;
+    case sPhraseObjBegin:
+    case sConceptsArr: state_ = target_sent_ ? sSentObj : sOtherSentObj; return true;
     case sComponent: state_ = sWordObj; return true;
-    case sSentObjBegin: state_ = sLineObj; return true;
+    case sWordsMappingArr: state_ = sOtherSentObj; return true;
+    case sPhrasesMappingArr: state_ = sOtherSentObj; return true;
     default: {
       err_ = "Unknown state in End array " + std::to_string(state_) ;
       return false;
@@ -363,6 +426,28 @@ struct line_handler_t : public base_line_handler_t<line_handler_t, handler_trait
     phrase_->components[phrase_->sz++] = num_val_.i;
     return true;
   }
+  inline bool concepts_begin(){
+    sent_->concepts.reserve(CONCEPTS_SIZE_HINT);
+    return true;
+  }
+  inline bool set_concept(){
+    sent_->concepts.push_back(val_);
+    return true;
+  }
+
+  inline bool words_mapping_begin(){
+    return true;
+  }
+  inline bool set_words_mapping(){
+    return true;
+  }
+  inline bool phrases_mapping_begin(){
+    return true;
+  }
+  inline bool set_phrases_mapping(){
+    return true;
+  }
+
 
   inline bool word_object_end(){
     return true;
@@ -393,6 +478,9 @@ struct compact_line_handler_t : public base_line_handler_t<compact_line_handler_
   const char* cur_str_ = nullptr;
   uint8_t cur_pos_tag_ = 0;
 
+  other_compact_sent_t* current_other_sent(){
+    return static_cast<other_compact_sent_t*>(this->sent_);
+  }
 
   inline bool set_word_str(){
     cur_str_ = this->val_;
@@ -418,6 +506,40 @@ struct compact_line_handler_t : public base_line_handler_t<compact_line_handler_
     return true;
   }
   inline bool set_component(){
+    return true;
+  }
+
+  inline bool concepts_begin(){
+    this->sent_->concepts.reserve(base_t::CONCEPTS_SIZE_HINT);
+    return true;
+  }
+  inline bool set_concept(){
+    int32_t num = get_id_func_(this->val_, 0);
+    if (num != -1)
+      this->sent_->concepts.push_back(num);
+    return true;
+  }
+
+  inline bool words_mapping_begin(){
+    auto sent = current_other_sent();
+    if (not sent->words.empty())
+      sent->mapping_to_target_words.reserve(sent->words.size());
+    return true;
+  }
+  inline bool set_words_mapping(){
+    auto sent = current_other_sent();
+    sent->mapping_to_target_words.push_back(this->num_val_.i);
+    return true;
+  }
+  inline bool phrases_mapping_begin(){
+    auto sent = current_other_sent();
+    if (not sent->phrases.empty())
+      sent->mapping_to_target_phrases.reserve(sent->phrases.size());
+    return true;
+  }
+  inline bool set_phrases_mapping(){
+    auto sent = current_other_sent();
+    sent->mapping_to_target_phrases.push_back(this->num_val_.i);
     return true;
   }
 

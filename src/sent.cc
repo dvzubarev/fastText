@@ -9,6 +9,7 @@ namespace fasttext {
 void sent_t::reset(){
   words.clear();
   phrases.clear();
+  concepts.clear();
 }
 
 void line_t::reset(){
@@ -19,6 +20,13 @@ void line_t::reset(){
 void compact_sent_t::reset(){
   words.clear();
   phrases.clear();
+  concepts.clear();
+}
+
+void other_compact_sent_t::reset(){
+  compact_sent_t::reset();
+  mapping_to_target_words.clear();
+  mapping_to_target_phrases.clear();
 }
 
 void compact_line_t::reset(){
@@ -76,7 +84,7 @@ void fill_other_mapping_impl(const std::vector<compact_word_t>& target,
   std::random_shuffle(mapping.begin(), mapping.begin() + sz);
 }
 
-void fill_other_mapping(compact_line_t& line){
+void fill_other_mapping_randomly(compact_line_t& line){
 
   for(auto& s : line.other_langs){
     fill_other_mapping_impl(line.target.words, s.words, s.mapping_to_target_words);

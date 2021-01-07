@@ -434,23 +434,44 @@ void FastText::skipgram(
 }
 
 void FastText::syntax_skipgram(Model::State& state, real lr, const compact_line_t& line){
-  updateModelOnWords(state, lr, line.target.words);
-  updateModelOnPhrases(state, lr, line.target.phrases);
+  updateModelOnWords(state, lr, line.target.words, line.target.concepts);
+  updateModelOnPhrases(state, lr, line.target.phrases, line.target.concepts);
   for (const auto& os : line.other_langs){
-    updateModelOnWords(state, lr, os.words);
-    mapOtherLangToTarget(state, lr, line.target.words, os.words, os.mapping_to_target_words);
-    updateModelOnPhrases(state, lr, os.phrases);
-    mapOtherLangToTarget(state, lr, line.target.phrases, os.phrases, os.mapping_to_target_phrases);
+    updateModelOnWords(state, lr, os.words, os.concepts);
+    mapOtherLangToTarget(state, lr, line.target.words, os.words,
+                         os.mapping_to_target_words, os.concepts);
+    updateModelOnPhrases(state, lr, os.phrases, os.concepts);
+    mapOtherLangToTarget(state, lr, line.target.phrases, os.phrases,
+                         os.mapping_to_target_phrases, os.concepts);
   }
 }
 
+std::vector<int32_t> FastText::combineFeats(Model::State& state,
+                                            const std::vector<int32_t>& feats,
+                                            const std::vector<int32_t>& sent_feats){
+  if(sent_feats.empty())
+    return feats;
+
+  std::uniform_int_distribution<> uniform(1, 10);
+  int32_t n = uniform(state.rng);
+  if (n <= args_->addSentFeats){
+    std::vector<int32_t> temp (feats.begin(), feats.end());
+    temp.insert(temp.end(), sent_feats.begin(), sent_feats.end());
+    return temp;
+  }
+  return feats;
+}
+
 void FastText::updateModelOnWords(Model::State& state, real lr,
-                                  const words_array_t& words){
+                                  const words_array_t& words,
+                                  const std::vector<int32_t>& sent_feats){
 
   for (int32_t w = 0; w < words.size(); w++) {
     if( words[w].num == -1 )
       continue;
-    const std::vector<int32_t>& feats = dict_->getSubwords(words[w].num);
+    std::vector<int32_t> feats = combineFeats(state,
+                                              dict_->getSubwords(words[w].num),
+                                              sent_feats);
 
     auto update_func = [&](int32_t pos){
       model_->update(feats, words, pos, lr, state);
@@ -463,13 +484,17 @@ void FastText::updateModelOnWords(Model::State& state, real lr,
 }
 void
 FastText::updateModelOnPhrases(Model::State& state, real lr,
-                               const words_array_t& phrases){
+                               const words_array_t& phrases,
+                               const std::vector<int32_t>& sent_feats){
 
   for (int32_t w = 0; w < phrases.size(); w++) {
     if(not phrases[w].is_phrase or phrases[w].num == -1 )
       continue;
     //This is phrase id and its components
-    const std::vector<int32_t>& feats = dict_->getSubwords(phrases[w].num);
+    std::vector<int32_t> feats = combineFeats(state,
+                                              dict_->getSubwords(phrases[w].num),
+                                              sent_feats);
+
     //TODO add subwords of components?
 
     auto update_func = [&](int32_t pos){
@@ -491,7 +516,8 @@ void
 FastText::
 mapOtherLangToTarget(Model::State& state, real lr,
                      const words_array_t& target_sent, const words_array_t& other_sent,
-                     const std::vector<int16_t>& mapping){
+                     const std::vector<int16_t>& mapping,
+                     const std::vector<int32_t>& sent_feats){
   for(int i=0;i<other_sent.size();++i){
     if (other_sent[i].num == -1)
       continue;
@@ -500,7 +526,9 @@ mapOtherLangToTarget(Model::State& state, real lr,
     if(target_pos == -1 or target_sent[target_pos].num == -1)
       continue;
 
-    const std::vector<int32_t>& feats = dict_->getSubwords(other_sent[i].num);
+    std::vector<int32_t> feats = combineFeats(state,
+                                              dict_->getSubwords(other_sent[i].num),
+                                              sent_feats);
 
     auto update_func = [&](int32_t pos){
       model_->update(feats, target_sent, pos, lr, state);

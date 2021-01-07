@@ -97,6 +97,28 @@ void Dictionary::add(const std::string& w) {
   }
 }
 
+void Dictionary::addConcepts(const std::vector<std::string>& v){
+  for (const std::string& s : v)
+    addConcept(s);
+}
+
+void Dictionary::addConcept(const std::string& s){
+  uint32_t h = hash(s, 0);
+  int32_t num = find(s, h, 0);
+
+  if (word2int_[num] == -1) {
+    entry e;
+    e.word = s;
+    e.pos_tag = 0;
+    e.count = 1;
+    e.type = entry_type::kbconcept;
+    words_.push_back(e);
+    word2int_[num] = size_++;
+  } else {
+    words_[word2int_[num]].count++;
+  }
+}
+
 void Dictionary::addWord(const word_t &w){
   uint32_t h = hash(w.str, w.pos_tag);
   int32_t num = find(w.str, h, w.pos_tag);
@@ -392,6 +414,8 @@ void Dictionary::addSent(const sent_t& sent){
     }
 
   }
+
+  addConcepts(sent.concepts);
 }
 
 void Dictionary::addLine(const line_t& line){
@@ -455,6 +479,7 @@ void Dictionary::threshold(int64_t t, int64_t tl) {
   nlabels_ = 0;
   nsubwords_ = 0;
   nphrases_ = 0;
+  nkbconcepts_ = 0;
   std::fill(word2int_.begin(), word2int_.end(), -1);
   for (auto it = words_.begin(); it != words_.end(); ++it) {
     int32_t h = find(it->word, it->pos_tag);
@@ -472,6 +497,9 @@ void Dictionary::threshold(int64_t t, int64_t tl) {
     }
     if (it->type == entry_type::label) {
       nlabels_++;
+    }
+    if (it->type == entry_type::kbconcept){
+      nkbconcepts_++;
     }
   }
 }
@@ -581,7 +609,9 @@ int32_t Dictionary::getLine(std::istream& in,
   };
   parse_from_json(json, get_id_func, line);
   make_aux_offs(line);
-  fill_other_mapping(line);
+  if (not line.other_langs.empty() and
+      line.other_langs.front().mapping_to_target_words.empty())
+    fill_other_mapping_randomly(line);
 
   //TODO impl discard
   auto fin_sent = [&ntokens](const compact_sent_t& s){
@@ -660,6 +690,7 @@ void Dictionary::save(std::ostream& out) const {
   out.write((char*)&nlabels_, sizeof(int32_t));
   out.write((char*)&nsubwords_, sizeof(int32_t));
   out.write((char*)&nphrases_, sizeof(int32_t));
+  out.write((char*)&nkbconcepts_, sizeof(int32_t));
   out.write((char*)&ntokens_, sizeof(int64_t));
   out.write((char*)&pruneidx_size_, sizeof(int64_t));
   for (int32_t i = 0; i < size_; i++) {
@@ -689,6 +720,7 @@ void Dictionary::load(std::istream& in) {
   in.read((char*)&nlabels_, sizeof(int32_t));
   in.read((char*)&nsubwords_, sizeof(int32_t));
   in.read((char*)&nphrases_, sizeof(int32_t));
+  in.read((char*)&nkbconcepts_, sizeof(int32_t));
   in.read((char*)&ntokens_, sizeof(int64_t));
   in.read((char*)&pruneidx_size_, sizeof(int64_t));
   for (int32_t i = 0; i < size_; i++) {
@@ -730,7 +762,7 @@ void Dictionary::load(std::istream& in) {
   }
   initSubwordsPos();
 
-  std::cerr<<"Loaded dict nwords="<<nwords_<<" phrases="<<nphrases_
+  std::cerr<<"Loaded dict nwords="<<nwords_<<" phrases="<<nphrases_<<" concepts="<<nkbconcepts_
            <<" subwords="<<nsubwords_<<" ntokens="<<ntokens_<<std::endl;
 }
 
@@ -807,6 +839,8 @@ void Dictionary::dump(std::ostream& out) const {
     case entry_type::label : entryType = "label"; break;
     case entry_type::subword : entryType = "subword"; break;
     case entry_type::phrase : entryType = "phrase"; break;
+    case entry_type::kbconcept: entryType = "concept"; break;
+    case entry_type::all: break;
     }
     auto num = it - words_.cbegin();
     auto h = hash(it->word, it->pos_tag);

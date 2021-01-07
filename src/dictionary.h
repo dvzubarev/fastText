@@ -40,7 +40,7 @@ inline bool contains(entry_type e, entry_type t){
 }
 template<class... EntryTypes>
 inline entry_type combine(EntryTypes... rest){
-  auto t = ( ... | static_cast<uint32_t>(rest) );
+  uint8_t t = ( ... | static_cast<uint8_t>(rest) );
   return entry_type{t};
 }
 
@@ -129,6 +129,8 @@ class Dictionary {
   void addPhrase(const phrase_t& p, const sent_t::words_array_t& words);
   void addLine(const line_t& line);
   void addSent(const sent_t& sent);
+  void addConcepts(const std::vector<std::string>& v);
+  void addConcept(const std::string& v);
   std::pair<uint32_t, int32_t> addSubword(const std::string&);
   bool readWord(std::istream&, std::string&) const;
   void readFromFile(std::istream&);

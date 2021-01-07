@@ -59,6 +59,7 @@ class Args {
   std::string pretrainedVectors;
   bool saveOutput;
   int seed;
+  int addSentFeats;
 
   bool qout;
   bool retrain;

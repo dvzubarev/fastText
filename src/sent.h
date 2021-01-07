@@ -39,6 +39,7 @@ struct compact_word_t{
 
 void make_aux_offs(std::vector<compact_word_t>& words);
 
+
 struct phrase_t : public word_t{
   static constexpr size_t MAX_PHRASE_SIZE = 3;
 
@@ -59,6 +60,8 @@ struct sent_t{
   words_array_t words;
   phrases_array_t phrases;
 
+  std::vector<std::string> concepts;
+
 };
 
 struct compact_sent_t{
@@ -67,11 +70,15 @@ struct compact_sent_t{
   void reset();
   words_array_t words;
   words_array_t phrases;
+
+  std::vector<int32_t> concepts;
 };
 
 struct other_compact_sent_t : public compact_sent_t{
   std::vector<int16_t>  mapping_to_target_words;
   std::vector<int16_t>  mapping_to_target_phrases;
+
+  void reset();
 };
 
 struct line_t{
@@ -90,7 +97,7 @@ struct compact_line_t{
 };
 
 void make_aux_offs(compact_line_t& line);
-void fill_other_mapping(compact_line_t& line);
+void fill_other_mapping_randomly(compact_line_t& line);
 
 
 bool contains(const std::vector<compact_word_t>& words, int32_t num);

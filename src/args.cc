@@ -39,6 +39,7 @@ Args::Args() {
   pretrainedVectors = "";
   saveOutput = false;
   seed = 0;
+  addSentFeats = 6;
 
   qout = false;
   retrain = false;
@@ -220,6 +221,8 @@ void Args::parseArgs(const std::vector<std::string>& args) {
         autotuneModelSize = std::string(args.at(ai + 1));
       } else if (args[ai] == "-bpe-codes"){
         bpeCodesPath = std::string(args.at(ai + 1));
+      } else if (args[ai] == "-add-sent-feats"){
+        addSentFeats = std::stoi(args.at(ai + 1));
       } else {
         std::cerr << "Unknown argument: " << args[ai] << std::endl;
         printHelp();
@@ -296,7 +299,9 @@ void Args::printTrainingHelp() {
       << pretrainedVectors << "]\n"
       << "  -saveOutput         whether output params should be saved ["
       << boolToString(saveOutput) << "]\n"
-      << "  -seed               random generator seed  [" << seed << "]\n";
+      << "  -seed               random generator seed  [" << seed << "]\n"
+      << "  -addSentFeats       chance of adding sent feats to word feats (0-10):"
+    " 0 means 0% chance, 10 means 100% chance [" << addSentFeats << "]\n";
 }
 
 void Args::printAutotuneHelp() {
@@ -344,6 +349,7 @@ void Args::save(std::ostream& out) {
   out.write((char*)&(maxn), sizeof(int));
   out.write((char*)&(lrUpdateRate), sizeof(int));
   out.write((char*)&(t), sizeof(double));
+  out.write((char*)&(addSentFeats), sizeof(int));
 }
 
 void Args::load(std::istream& in) {
@@ -360,6 +366,7 @@ void Args::load(std::istream& in) {
   in.read((char*)&(maxn), sizeof(int));
   in.read((char*)&(lrUpdateRate), sizeof(int));
   in.read((char*)&(t), sizeof(double));
+  in.read((char*)&(addSentFeats), sizeof(int));
 }
 
 void Args::dump(std::ostream& out) const {
