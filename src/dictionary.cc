@@ -38,7 +38,7 @@ Dictionary::Dictionary(std::shared_ptr<Args> args)
       nkbconcepts_(0),
       ntokens_(0),
       pruneidx_size_(-1){
-  encoder_.reset(new fastBPE::Encoder(args->bpeCodesPath, true));
+  encoder_.reset(new fastBPE::Encoder(args->bpeCodesPath, false));
 }
 
 Dictionary::Dictionary(std::shared_ptr<Args> args, std::istream& in)

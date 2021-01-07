@@ -47,6 +47,7 @@ struct base_line_handler_t : public rapidjson::BaseReaderHandler<utf_traits_t,
     sOtherSentArr,
     sWordsMappingArr,
     sPhrasesMappingArr,
+    sOrigin,
   };
   union val_t{
     bool b;
@@ -124,6 +125,10 @@ struct base_line_handler_t : public rapidjson::BaseReaderHandler<utf_traits_t,
     }
     if (mem_equal("concepts", 8u, key_, sz_)){
       state_ = sConceptsArr;
+      return true;
+    }
+    if (mem_equal("origin", 6u, key_, sz_)){
+      state_ = sOrigin;
       return true;
     }
 
@@ -270,6 +275,7 @@ struct base_line_handler_t : public rapidjson::BaseReaderHandler<utf_traits_t,
     case sWordSyntRelVal: return on_word_synt_rel_val();
     case sWordsMappingArr: return on_words_mapping_val();
     case sPhrasesMappingArr: return on_phrases_mapping_val();
+    case sOrigin: state_ = target_sent_ ? sSentObj : sOtherSentObj; return true;
     default: {
       err_ = "Unknown state in handle state " + std::to_string(state_) ;
       return false;
