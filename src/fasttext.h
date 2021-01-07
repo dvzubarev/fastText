@@ -61,7 +61,8 @@ class FastText {
       const DenseMatrix& wordVectors,
       const Vector& queryVec,
       int32_t k,
-      const std::set<std::string>& banSet);
+      const std::set<std::string>& banSet,
+      entry_type allowedTypes = entry_type::all);
   void lazyComputeWordVectors();
   void printInfo(real, real, std::ostream&);
   std::shared_ptr<Matrix> getInputMatrixFromFile(const std::string&) const;
@@ -172,7 +173,8 @@ class FastText {
   std::vector<std::pair<real, std::string>> getNN(
       const std::string& word,
       int posTag,
-      int32_t k);
+      int32_t k,
+      entry_type allowedTypes = entry_type::all);
 
   real compareWords(
     const std::string& word1,

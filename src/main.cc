@@ -120,6 +120,7 @@ void printNNUsage() {
   std::cout << "usage: fasttext nn <model> <k>\n\n"
             << "  <model>      model filename\n"
             << "  <k>          (optional; 10 by default) predict top k labels\n"
+            << "  <allowedTypes> (optional; 255 by default) predict only entries with given type\n"
             << std::endl;
 }
 
@@ -323,11 +324,16 @@ void printNgrams(const std::vector<std::string> args) {
 
 void nn(const std::vector<std::string> args) {
   int32_t k;
+  fasttext::entry_type allowedTypes{fasttext::entry_type::all};
   if (args.size() == 3) {
     k = 10;
   } else if (args.size() == 4) {
     k = std::stoi(args[3]);
-  } else {
+  } else if (args.size() == 5) {
+    k = std::stoi(args[3]);
+    allowedTypes = fasttext::entry_type{static_cast<uint8_t>(std::stoi(args[4]))};
+  }
+  else {
     printNNUsage();
     exit(EXIT_FAILURE);
   }
@@ -339,7 +345,7 @@ void nn(const std::vector<std::string> args) {
   std::string queryWord;
   int posTag;
   while (std::cin >> queryWord >> posTag) {
-    printPredictions(fasttext.getNN(queryWord, posTag, k), true, true);
+    printPredictions(fasttext.getNN(queryWord, posTag, k, allowedTypes), true, true);
     std::cout << prompt;
   }
   exit(0);

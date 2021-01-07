@@ -783,21 +783,23 @@ void FastText::lazyComputeWordVectors() {
 std::vector<std::pair<real, std::string>> FastText::getNN(
     const std::string& word,
     int posTag,
-    int32_t k) {
+    int32_t k,
+    entry_type allowedTypes) {
   Vector query(args_->dim);
 
   getWordVector(query, word, posTag);
 
   lazyComputeWordVectors();
   assert(wordVectors_);
-  return getNN(*wordVectors_, query, k, {word});
+  return getNN(*wordVectors_, query, k, {word}, allowedTypes);
 }
 
 std::vector<std::pair<real, std::string>> FastText::getNN(
     const DenseMatrix& wordVectors,
     const Vector& query,
     int32_t k,
-    const std::set<std::string>& banSet) {
+    const std::set<std::string>& banSet,
+    entry_type allowedTypes) {
   std::vector<std::pair<real, std::string>> heap;
 
   real queryNorm = query.norm();
@@ -806,6 +808,8 @@ std::vector<std::pair<real, std::string>> FastText::getNN(
   }
 
   for (int32_t i = 0; i < dict_->size(); i++) {
+    if (not contains(allowedTypes, dict_->getType(i)))
+      continue;
     std::string word = dict_->getWord(i);
     if (banSet.find(word) == banSet.end()) {
       real dp = wordVectors.dotRow(query, i);
