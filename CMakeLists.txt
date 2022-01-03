@@ -71,6 +71,7 @@ target_link_libraries(fasttext-shared ${DEPS})
 target_include_directories(fasttext-shared PRIVATE ${INCLUDES})
 add_library(fasttext-static STATIC ${SOURCE_FILES} ${HEADER_FILES})
 target_link_libraries(fasttext-static ${DEPS})
+target_include_directories(fasttext-static PRIVATE ${INCLUDES})
 add_library(fasttext-static_pic STATIC ${SOURCE_FILES} ${HEADER_FILES})
 set_target_properties(fasttext-shared PROPERTIES OUTPUT_NAME fasttext
   SOVERSION "${fasttext_VERSION_MAJOR}")
