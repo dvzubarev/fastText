@@ -9,8 +9,8 @@
 namespace fasttext {
 
 struct word_t{
-  uint8_t pos_tag;
-  uint8_t synt_rel;
+  uint8_t pos_tag = 0;
+  uint8_t synt_rel = 0;
   int16_t parent_offs;
 
   // uint64_t hash_;

@@ -8,7 +8,7 @@ void print_sent(const fasttext::sent_t& sent){
 
   std::cout<<" words; "<<std::endl;
   for (auto& w : sent.words)
-    std::cout<<"wnum "<<w.str<<" pos "<<(int)w.pos_tag
+    std::cout<<"wstr "<<w.str<<" pos "<<(int)w.pos_tag
              <<" link "<<w.parent_offs<<" rel "<<(int)w.synt_rel<<std::endl;
   std::cout<<"phrases; "<<std::endl;
   for (auto& w : sent.phrases){

@@ -463,7 +463,7 @@ void createDict(const std::vector<std::string>& args){
   std::ofstream ofs(pa->output);
   if (!ofs.is_open()) {
     throw std::invalid_argument(
-        pa->output + " cannot be opened for saving vectors!");
+        pa->output + " cannot be opened for saving dict!");
   }
   d.save(ofs);
 

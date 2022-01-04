@@ -182,24 +182,21 @@ struct base_line_handler_t : public rapidjson::BaseReaderHandler<utf_traits_t,
     return true;
   }
   bool on_word_obj(){
-    //TODO if make keys uint8, i can create table for selecting state.
-    if (mem_equal("word", 4u, key_, sz_)){
+    assert(sz_ == 1);
+    switch(static_cast<char>(*key_)){
+    case 'w':
       state_ = sWordStrVal;
       return true;
-    }
-    if (mem_equal("p", 1u, key_, sz_)){
+    case 'p':
       state_ = sWordPosTagVal;
       return true;
-    }
-    if (mem_equal("l", 1u, key_, sz_)){
+    case 'l':
       state_ = sWordParentOffsVal;
       return true;
-    }
-    if (mem_equal("n", 1u, key_, sz_)){
+    case 'n':
       state_ = sWordSyntRelVal;
       return true;
-    }
-    if (mem_equal("CO", 2u, key_, sz_)){
+    case 'C':
       state_ = sComponent;
       return true;
     }
@@ -550,8 +547,8 @@ struct compact_line_handler_t : public base_line_handler_t<compact_line_handler_
   }
 
   inline bool word_object_end(){
-    if (!cur_str_ or !cur_pos_tag_){
-      this->err_ = "str or pos_tag is empty!";
+    if (!cur_str_){
+      this->err_ = "str is empty!";
       return false;
     }
 
