@@ -420,29 +420,66 @@ void FastText::cbow(
 void FastText::skipgram(
     Model::State& state,
     real lr,
-    const std::vector<int32_t>& line) {
+    const compact_line_t& line) {
+  updateModelOnWords(state, lr, line.target.words);
+
+  for (const auto& os : line.other_langs){
+    updateModelOnWords(state, lr, os.words);
+    mapOtherLangToTarget(state, lr, line.target.words, os.words,
+                         os.mapping_to_target_words);
+  }
+
+}
+
+void FastText::updateModelOnWords(Model::State& state, real lr,
+                                  const words_array_t& words){
   std::uniform_int_distribution<> uniform(1, args_->ws);
-  for (int32_t w = 0; w < line.size(); w++) {
+  for (int32_t w = 0; w < words.size(); w++) {
+    const std::vector<int32_t>& feats = dict_->getSubwords(words[w].num);
     int32_t boundary = uniform(state.rng);
-    const std::vector<int32_t>& ngrams = dict_->getSubwords(line[w]);
     for (int32_t c = -boundary; c <= boundary; c++) {
-      if (c != 0 && w + c >= 0 && w + c < line.size()) {
-        // model_->update(ngrams, line, w + c, lr, state);
+      if (c != 0 && w + c >= 0 && w + c < words.size()) {
+        model_->update(feats, words, w + c, lr, state);
       }
     }
   }
+
+}
+void FastText::mapOtherLangToTarget(Model::State& state, real lr,
+                                    const words_array_t& target_sent,
+                                    const words_array_t& other_sent,
+                                    const std::vector<int16_t>& mapping){
+  std::uniform_int_distribution<> uniform(1, args_->ws);
+  for(int i=0;i<other_sent.size();++i){
+    if (other_sent[i].num == -1)
+      continue;
+
+    auto target_pos = mapping[i];
+    if(target_pos == -1 or target_sent[target_pos].num == -1)
+      continue;
+
+    const std::vector<int32_t>& feats = dict_->getSubwords(other_sent[i].num);
+
+    int32_t boundary = uniform(state.rng);
+    for (int32_t c = -boundary; c <= boundary; c++) {
+      if (target_pos + c >= 0 && target_pos + c < target_sent.size()) {
+        model_->update(feats, target_sent, target_pos + c, lr, state);
+      }
+    }
+  }
+
 }
 
 void FastText::syntax_skipgram(Model::State& state, real lr, const compact_line_t& line){
-  updateModelOnWords(state, lr, line.target.words, line.target.concepts);
-  updateModelOnPhrases(state, lr, line.target.phrases, line.target.concepts);
+  updateModelOnWordsSyntax(state, lr, line.target.words, line.target.concepts);
+  updateModelOnPhrasesSyntax(state, lr, line.target.phrases, line.target.concepts);
   for (const auto& os : line.other_langs){
-    updateModelOnWords(state, lr, os.words, os.concepts);
-    mapOtherLangToTarget(state, lr, line.target.words, os.words,
-                         os.mapping_to_target_words, os.concepts);
-    updateModelOnPhrases(state, lr, os.phrases, os.concepts);
-    mapOtherLangToTarget(state, lr, line.target.phrases, os.phrases,
-                         os.mapping_to_target_phrases, os.concepts);
+    updateModelOnWordsSyntax(state, lr, os.words, os.concepts);
+    mapOtherLangToTargetSyntax(state, lr, line.target.words, os.words,
+                               os.mapping_to_target_words, os.concepts);
+    updateModelOnPhrasesSyntax(state, lr, os.phrases, os.concepts);
+    mapOtherLangToTargetSyntax(state, lr, line.target.phrases, os.phrases,
+                               os.mapping_to_target_phrases, os.concepts);
   }
 }
 
@@ -462,9 +499,9 @@ std::vector<int32_t> FastText::combineFeats(Model::State& state,
   return feats;
 }
 
-void FastText::updateModelOnWords(Model::State& state, real lr,
-                                  const words_array_t& words,
-                                  const std::vector<int32_t>& sent_feats){
+void FastText::updateModelOnWordsSyntax(Model::State& state, real lr,
+                                        const words_array_t& words,
+                                        const std::vector<int32_t>& sent_feats){
 
   for (int32_t w = 0; w < words.size(); w++) {
     if( words[w].num == -1 )
@@ -483,9 +520,9 @@ void FastText::updateModelOnWords(Model::State& state, real lr,
   }
 }
 void
-FastText::updateModelOnPhrases(Model::State& state, real lr,
-                               const words_array_t& phrases,
-                               const std::vector<int32_t>& sent_feats){
+FastText::updateModelOnPhrasesSyntax(Model::State& state, real lr,
+                                     const words_array_t& phrases,
+                                     const std::vector<int32_t>& sent_feats){
 
   for (int32_t w = 0; w < phrases.size(); w++) {
     if(not phrases[w].is_phrase or phrases[w].num == -1 )
@@ -514,10 +551,10 @@ FastText::updateModelOnPhrases(Model::State& state, real lr,
 
 void
 FastText::
-mapOtherLangToTarget(Model::State& state, real lr,
-                     const words_array_t& target_sent, const words_array_t& other_sent,
-                     const std::vector<int16_t>& mapping,
-                     const std::vector<int32_t>& sent_feats){
+mapOtherLangToTargetSyntax(Model::State& state, real lr,
+                           const words_array_t& target_sent, const words_array_t& other_sent,
+                           const std::vector<int16_t>& mapping,
+                           const std::vector<int32_t>& sent_feats){
   for(int i=0;i<other_sent.size();++i){
     if (other_sent[i].num == -1)
       continue;
@@ -914,11 +951,11 @@ void FastText::trainThread(int32_t threadId, const TrainCallback& callback) {
       // } else if (args_->model == model_name::cbow) {
       //   localTokenCount += dict_->getLine(ifs, line, state.rng);
       //   cbow(state, lr, line);
-      // } else if (args_->model == model_name::sg){
-      //   localTokenCount += dict_->getLine(ifs, line, state.rng);
-      //   skipgram(state, lr, line);
-      // }
-      if (args_->model == model_name::syntax_sg) {
+      //} else
+      if (args_->model == model_name::sg){
+        localTokenCount += dict_->getLine(ifs, line, state.rng);
+        skipgram(state, lr, line);
+      } else if (args_->model == model_name::syntax_sg) {
         localTokenCount += dict_->getLine(ifs, line, state.rng);
         syntax_skipgram(state, lr, line);
       }else throw std::runtime_error("Unsupported model!");

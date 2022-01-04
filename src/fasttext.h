@@ -76,18 +76,24 @@ class FastText {
       const std::vector<int32_t>& line,
       const std::vector<int32_t>& labels);
   void cbow(Model::State& state, real lr, const std::vector<int32_t>& line);
-  void skipgram(Model::State& state, real lr, const std::vector<int32_t>& line);
-  void syntax_skipgram(Model::State& state, real lr, const compact_line_t& line);
+  void skipgram(Model::State& state, real lr, const compact_line_t& line);
   void updateModelOnWords(Model::State& state, real lr,
-                          const words_array_t& words,
-                          const std::vector<int32_t>& sent_feats);
-  void updateModelOnPhrases(Model::State& state, real lr,
-                            const words_array_t& phrases,
-                            const std::vector<int32_t>& sent_feats);
+                                const words_array_t& words);
   void mapOtherLangToTarget(Model::State& state, real lr,
                             const words_array_t& target, const words_array_t& other,
-                            const std::vector<int16_t>& mapping,
-                            const std::vector<int32_t>& sent_feats);
+                            const std::vector<int16_t>& mapping);
+
+  void syntax_skipgram(Model::State& state, real lr, const compact_line_t& line);
+  void updateModelOnWordsSyntax(Model::State& state, real lr,
+                                const words_array_t& words,
+                                const std::vector<int32_t>& sent_feats);
+  void updateModelOnPhrasesSyntax(Model::State& state, real lr,
+                                  const words_array_t& phrases,
+                                  const std::vector<int32_t>& sent_feats);
+  void mapOtherLangToTargetSyntax(Model::State& state, real lr,
+                                  const words_array_t& target, const words_array_t& other,
+                                  const std::vector<int16_t>& mapping,
+                                  const std::vector<int32_t>& sent_feats);
 
   std::vector<int32_t> combineFeats(Model::State& state,
                                     const std::vector<int32_t>& feats,
