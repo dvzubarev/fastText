@@ -59,9 +59,10 @@ class Dictionary {
   static const int32_t MAX_VOCAB_SIZE = 150'000'000;
   static const int32_t MAX_LINE_SIZE = 1024;
 
-  int32_t find(const std::string_view&, uint8_t pos_tag = 0) const;
-  int32_t find(const std::string_view&, uint32_t h, uint8_t pos_tag = 0) const;
-  int32_t find(uint32_t h) const;
+  int32_t find(const std::string_view&, uint8_t pos_tag = 0, entry_type et = entry_type::all) const;
+  int32_t find(const std::string_view&, uint32_t h,
+               uint8_t pos_tag = 0, entry_type et = entry_type::all) const;
+  int32_t find(uint32_t h, entry_type et = entry_type::all) const;
   void initTableDiscard();
   void initNgrams();
   void initSubwords();
@@ -105,7 +106,7 @@ class Dictionary {
   int32_t nwords() const;
   int32_t nlabels() const;
   int64_t ntokens() const;
-  int32_t getId(const std::string&, uint8_t pos_tag = 0) const;
+  int32_t getId(const std::string&, uint8_t pos_tag = 0, entry_type et = entry_type::all) const;
   int32_t getId(const std::string&, uint32_t h) const;
   entry_type getType(int32_t) const;
   entry_type getType(const std::string&) const;

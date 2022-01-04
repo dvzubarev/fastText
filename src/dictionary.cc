@@ -55,20 +55,21 @@ Dictionary::Dictionary(std::shared_ptr<Args> args, std::istream& in)
   load(in);
 }
 
-int32_t Dictionary::find(const std::string_view& w, uint8_t pos_tag) const {
-  return find(w, hash(w, pos_tag), pos_tag);
+int32_t Dictionary::find(const std::string_view& w, uint8_t pos_tag, entry_type et) const {
+  return find(w, hash(w, pos_tag), pos_tag, et);
 }
 
-int32_t Dictionary::find(const std::string_view& str, uint32_t h, uint8_t pos_tag) const {
+int32_t Dictionary::find(const std::string_view& str, uint32_t h,
+                         uint8_t pos_tag, const entry_type et) const {
   int32_t word2intsize = word2int_.size();
   int32_t id = h % word2intsize;
   int32_t pos = word2int_[id];
   while (pos != -1 ) {
     const auto& w = words_[pos];
     if (!str.empty()) {
-      if (w.word == str && w.pos_tag == pos_tag)
+      if (w.word == str && w.pos_tag == pos_tag && contains(et, w.type))
         break;
-    }  else if(hash(w.word, w.pos_tag) == h)
+    }  else if(hash(w.word, w.pos_tag) == h && contains(et, w.type))
       break;
 
     id = (id + 1) % word2intsize;
@@ -77,9 +78,9 @@ int32_t Dictionary::find(const std::string_view& str, uint32_t h, uint8_t pos_ta
   return id;
 }
 
-int32_t Dictionary::find(uint32_t h) const {
+int32_t Dictionary::find(uint32_t h, entry_type et) const {
   static std::string empty;
-  return find(empty, h);
+  return find(empty, h, 0, et);
 }
 
 void Dictionary::add(const std::string& w) {
@@ -104,7 +105,7 @@ void Dictionary::addConcepts(const std::vector<std::string>& v){
 
 void Dictionary::addConcept(const std::string& s){
   uint32_t h = hash(s, 0);
-  int32_t num = find(s, h, 0);
+  int32_t num = find(s, h, 0, entry_type::kbconcept);
 
   if (word2int_[num] == -1) {
     entry e;
@@ -121,7 +122,7 @@ void Dictionary::addConcept(const std::string& s){
 
 void Dictionary::addWord(const word_t &w){
   uint32_t h = hash(w.str, w.pos_tag);
-  int32_t num = find(w.str, h, w.pos_tag);
+  int32_t num = find(w.str, h, w.pos_tag, entry_type::word);
 
   ntokens_++;
   if (word2int_[num] == -1) {
@@ -139,7 +140,7 @@ void Dictionary::addWord(const word_t &w){
 }
 void Dictionary::addPhrase(const phrase_t& p, const sent_t::words_array_t& words){
   uint32_t h = hash(p.str);
-  int32_t num = find(p.str, h);
+  int32_t num = find(p.str, h, 0, entry_type::phrase);
 
   ntokens_++;
   if (word2int_[num] == -1) {
@@ -164,7 +165,7 @@ void Dictionary::addPhrase(const phrase_t& p, const sent_t::words_array_t& words
 
 std::pair<uint32_t, int32_t> Dictionary::addSubword(const std::string& word) {
   uint32_t h = hash(word);
-  int32_t pos = find(word, h);
+  int32_t pos = find(word, h, 0, entry_type::subword);
   if (word2int_[pos] == -1) {
     entry e;
     e.word = word;
@@ -217,7 +218,7 @@ const std::vector<int32_t>& Dictionary::getSubwords(int32_t i) const {
 
 const std::vector<int32_t> Dictionary::getSubwords(
   const std::string& word, uint8_t pos_tag) const {
-  int32_t i = getId(word, pos_tag);
+  int32_t i = getId(word, pos_tag, entry_type::word);
   if (i >= 0) {
     return getSubwords(i);
   }
@@ -258,8 +259,8 @@ int32_t Dictionary::getId(const std::string& w, uint32_t h) const {
   return word2int_[id];
 }
 
-int32_t Dictionary::getId(const std::string& w, uint8_t pos_tag) const {
-  int32_t h = find(w, pos_tag);
+int32_t Dictionary::getId(const std::string& w, uint8_t pos_tag, entry_type et) const {
+  int32_t h = find(w, pos_tag, et);
   return word2int_[h];
 }
 
@@ -314,7 +315,7 @@ void Dictionary::computeSubwords(
     std::vector<std::string>* substrings) const {
   auto subwords = extractSubwords(word);
   for(const auto& subword : subwords){
-    auto id = find(subword);
+    auto id = find(subword, 0, entry_type::subword);
     if (word2int_[id] == -1)
       continue;
     ngrams.push_back(word2int_[id]);
@@ -604,7 +605,7 @@ int32_t Dictionary::getLine(std::istream& in,
 
 
   auto get_id_func = [this](const char* str, uint8_t pos_tag){
-    auto h = find(str, pos_tag);
+    auto h = find(str, pos_tag, entry_type::word);
     return word2int_[h];
   };
   parse_from_json(json, get_id_func, line);
@@ -783,7 +784,7 @@ void Dictionary::initSubwordsPos(){
     w.subwords.clear();
     w.subwords.push_back(i);
     for(auto h : w.hashes){
-      auto id = find(h);
+      auto id = find(h, entry_type::subword);
       auto pos = word2int_[id];
       if (pos != -1)
         w.subwords.push_back(pos);
