@@ -78,7 +78,12 @@ class FastText {
   void cbow(Model::State& state, real lr, const std::vector<int32_t>& line);
   void skipgram(Model::State& state, real lr, const compact_line_t& line);
   void updateModelOnWords(Model::State& state, real lr,
-                                const words_array_t& words);
+                          const words_array_t& words);
+  void updateModelOnWordsContext(Model::State& state, real lr,
+                                 const std::vector<int32_t>& feats,
+                                 const words_array_t& words,
+                                 int32_t w,
+                                 std::uniform_int_distribution<>& uniform);
   void mapOtherLangToTarget(Model::State& state, real lr,
                             const words_array_t& target, const words_array_t& other,
                             const std::vector<int16_t>& mapping);

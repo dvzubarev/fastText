@@ -431,17 +431,42 @@ void FastText::skipgram(
 
 }
 
+void FastText::updateModelOnWordsContext(Model::State& state, real lr,
+                                         const std::vector<int32_t>& feats,
+                                         const words_array_t& words,
+                                         int32_t w,
+                                         std::uniform_int_distribution<>& uniform){
+
+  int32_t boundary = uniform(state.rng);
+  int32_t c = -1, visited_ctx_words=0;
+  while(w+c >=0 && visited_ctx_words != boundary){
+    if (words[w+c].num != -1){
+      model_->update(feats, words, w + c, lr, state);
+      ++visited_ctx_words;
+    }
+    --c;
+  }
+
+  c = 1, visited_ctx_words = 0;
+  while(w+c < words.size() && visited_ctx_words != boundary){
+    if (words[w+c].num != -1){
+      model_->update(feats, words, w + c, lr, state);
+      ++visited_ctx_words;
+    }
+    ++c;
+  }
+}
+
 void FastText::updateModelOnWords(Model::State& state, real lr,
                                   const words_array_t& words){
   std::uniform_int_distribution<> uniform(1, args_->ws);
   for (int32_t w = 0; w < words.size(); w++) {
+    if( words[w].num == -1 )
+      continue;
     const std::vector<int32_t>& feats = dict_->getSubwords(words[w].num);
-    int32_t boundary = uniform(state.rng);
-    for (int32_t c = -boundary; c <= boundary; c++) {
-      if (c != 0 && w + c >= 0 && w + c < words.size()) {
-        model_->update(feats, words, w + c, lr, state);
-      }
-    }
+
+    updateModelOnWordsContext(state, lr, feats, words, w, uniform);
+
   }
 
 }
@@ -460,12 +485,9 @@ void FastText::mapOtherLangToTarget(Model::State& state, real lr,
 
     const std::vector<int32_t>& feats = dict_->getSubwords(other_sent[i].num);
 
-    int32_t boundary = uniform(state.rng);
-    for (int32_t c = -boundary; c <= boundary; c++) {
-      if (target_pos + c >= 0 && target_pos + c < target_sent.size()) {
-        model_->update(feats, target_sent, target_pos + c, lr, state);
-      }
-    }
+    model_->update(feats, target_sent, target_pos, lr, state);
+
+    updateModelOnWordsContext(state, lr, feats, target_sent, target_pos, uniform);
   }
 
 }
