@@ -247,7 +247,6 @@ void Dictionary::getSubwords(
 
 bool Dictionary::discard(int32_t id, real rand) const {
   assert(id >= 0);
-  assert(id < nwords_);
   if (args_->model == model_name::sup) {
     return false;
   }
@@ -506,10 +505,14 @@ void Dictionary::threshold(int64_t t, int64_t tl) {
 }
 
 void Dictionary::initTableDiscard() {
-  pdiscard_.resize(size_);
+  pdiscard_.resize(size_, 1.);
+  auto words_or_phrases = combine(entry_type::word, entry_type::phrase);
+
   for (size_t i = 0; i < size_; i++) {
-    real f = real(words_[i].count) / real(ntokens_);
-    pdiscard_[i] = std::sqrt(args_->t / f) + args_->t / f;
+    if (contains(words_or_phrases, words_[i].type)){
+      real f = real(words_[i].count) / real(ntokens_);
+      pdiscard_[i] = std::sqrt(args_->t / f) + args_->t / f;
+    }
   }
 }
 
@@ -593,7 +596,7 @@ int32_t Dictionary::getLine(std::istream& in,
                             compact_line_t& line,
                             std::minstd_rand& rng) const{
 
-  // std::uniform_real_distribution<> uniform(0, 1);
+  std::uniform_real_distribution<> uniform(0, 1);
   int32_t ntokens = 0;
 
   std::string json;
@@ -614,19 +617,23 @@ int32_t Dictionary::getLine(std::istream& in,
       line.other_langs.front().mapping_to_target_words.empty())
     fill_other_mapping_randomly(line);
 
-  //TODO impl discard
-  auto fin_sent = [&ntokens](const compact_sent_t& s){
-    for(const auto& w : s.words)
-      if (w.num >= 0)
+  auto fin_sent = [this, &ntokens, &uniform, &rng](compact_sent_t& s){
+    for(auto& w : s.words)
+      if (w.num >= 0){
         ntokens++;
-    for(const auto& w : s.phrases)
-      if (w.is_phrase and w.num >= 0)
+        if (discard(w.num, uniform(rng)))
+          w.num = -1;
+      }
+    for(auto& w : s.phrases)
+      if (w.is_phrase and w.num >= 0){
         ntokens++;
-
+        if (discard(w.num, uniform(rng)))
+          w.num = -1;
+      }
   };
 
   fin_sent(line.target);
-  for(const auto& os : line.other_langs)
+  for(auto& os : line.other_langs)
     fin_sent(os);
   return ntokens;
 
