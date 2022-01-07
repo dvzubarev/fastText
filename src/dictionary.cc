@@ -482,7 +482,7 @@ void Dictionary::threshold(int64_t t, int64_t tl) {
   nkbconcepts_ = 0;
   std::fill(word2int_.begin(), word2int_.end(), -1);
   for (auto it = words_.begin(); it != words_.end(); ++it) {
-    int32_t h = find(it->word, it->pos_tag);
+    int32_t h = find(it->word, it->pos_tag, it->type);
     word2int_[h] = size_++;
     if (it->type == entry_type::word) {
       //TODO init subwords
@@ -766,7 +766,7 @@ void Dictionary::load(std::istream& in) {
 
   word2int_.assign(MAX_VOCAB_SIZE, -1);
   for (int32_t i = 0; i < size_; i++) {
-    word2int_[find(words_[i].word, words_[i].pos_tag)] = i;
+    word2int_[find(words_[i].word, words_[i].pos_tag, words_[i].type)] = i;
   }
   initSubwordsPos();
 
@@ -828,7 +828,8 @@ void Dictionary::prune(std::vector<int32_t>& idx) {
     if (getType(i) == entry_type::label ||
         (j < words.size() && words[j] == i)) {
       words_[j] = words_[i];
-      word2int_[find(words_[j].word)] = j;
+      const auto& wt = words_[j];
+      word2int_[find(wt.word, wt.pos_tag, wt.type)] = j;
       j++;
     }
   }

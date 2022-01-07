@@ -125,7 +125,7 @@ void printNNUsage() {
 }
 
 void printCompareUsage() {
-  std::cout << "usage: fasttext compare <model> <input file> <output file>\n\n"
+  std::cout << "usage: fasttext compare <model> <input file> <output file> [-no-pos-tag]\n\n"
             << "  <model>      model filename\n"
             << "  <input file>  file with word pairs \n"
             << "  <output file>  output file with word pairs and sim \n"
@@ -488,7 +488,7 @@ void dumpDict(const std::vector<std::string>& args){
 
 void CompareWords(const std::vector<std::string>& args){
   int32_t k;
-  if (args.size() != 5) {
+  if (args.size() < 5) {
     printCompareUsage();
     exit(EXIT_FAILURE);
   }
@@ -502,6 +502,7 @@ void CompareWords(const std::vector<std::string>& args){
   if (!out.is_open())
     throw std::runtime_error("Failed to open " + std::string(args[4]));
 
+  bool no_pos_tag = args.size() > 5 and args[5] == "-no-pos-tag";
   std::string line;
   //skip header
   std::getline(in, line);
@@ -512,7 +513,9 @@ void CompareWords(const std::vector<std::string>& args){
     if (parts.size() != 5)
       throw std::runtime_error("Failed to split string");
     uint8_t pos_tag;
-    if (parts[3] == "nouns")
+    if (no_pos_tag)
+      pos_tag = 0;
+    else if (parts[3] == "nouns")
       pos_tag = 2;
     else if (parts[3] == "verbs")
       pos_tag = 1;
