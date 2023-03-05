@@ -2,6 +2,8 @@
 #define FASTTEXT_SENT_HXX
 
 #include "sent.h"
+#include <stdexcept>
+
 
 #include <rapidjson/reader.h>
 #include <rapidjson/error/en.h>
