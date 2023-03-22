@@ -155,7 +155,9 @@ void DenseMatrix::save(std::ostream& out) const {
 void DenseMatrix::load(std::istream& in) {
   in.read((char*)&m_, sizeof(int64_t));
   in.read((char*)&n_, sizeof(int64_t));
-  data_ = std::vector<real>(m_ * n_);
+  if (data_.size () != m_ * n_) { 
+      data_.resize(m_ * n_);
+  }
   in.read((char*)data_.data(), m_ * n_ * sizeof(real));
 }
 

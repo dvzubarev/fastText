@@ -37,6 +37,7 @@ class Args {
  public:
   Args();
   std::string input;
+  std::string inputModel;
   std::string output;
   double lr;
   int lrUpdateRate;
@@ -44,6 +45,7 @@ class Args {
   int ws;
   int epoch;
   int ntokensUp;
+  int nepoch;
   int minCount;
   int minCountLabel;
   int neg;

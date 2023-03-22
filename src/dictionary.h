@@ -154,6 +154,7 @@ class Dictionary {
   }
   void dump(std::ostream&) const;
   void init();
+  void setNtokens(int64_t ntokens) { ntokens_ = ntokens; }
 };
 
 } // namespace fasttext

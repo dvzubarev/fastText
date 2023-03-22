@@ -29,7 +29,7 @@ class Loss {
       Predictions& heap,
       const Vector& output) const;
 
- protected:
+ public:
   std::vector<real> t_sigmoid_;
   std::vector<real> t_log_;
   std::shared_ptr<Matrix>& wo_;
