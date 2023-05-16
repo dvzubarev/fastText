@@ -121,13 +121,14 @@ void Dictionary::addConcept(const std::string& s){
 }
 
 void Dictionary::addWord(const word_t &w){
-  uint32_t h = hash(w.str, w.pos_tag);
-  int32_t num = find(w.str, h, w.pos_tag, entry_type::word);
+  uint32_t h = hash(w.word_id, w.pos_tag);
+  int32_t num = find(w.word_id, h, w.pos_tag, entry_type::word);
 
   ntokens_++;
   if (word2int_[num] == -1) {
     entry e;
-    e.word = w.str;
+    e.word = w.word_id;
+    e.word_str = w.str;
     e.pos_tag = w.pos_tag;
     e.count = 1;
     // e.type = getType(w);
@@ -139,21 +140,21 @@ void Dictionary::addWord(const word_t &w){
   }
 }
 void Dictionary::addPhrase(const phrase_t& p, const sent_t::words_array_t& words){
-  uint32_t h = hash(p.str);
-  int32_t num = find(p.str, h, 0, entry_type::phrase);
+  uint32_t h = hash(p.word_id);
+  int32_t num = find(p.word_id, h, 0, entry_type::phrase);
 
   ntokens_++;
   if (word2int_[num] == -1) {
     entry e;
-    e.word = p.str;
+    e.word = p.word_id;
     e.pos_tag = 0;
     e.count = 1;
     e.type = entry_type::phrase;
     for(int i = 0;i<p.sz;++i) {
       const auto& w = words[p.components[i]];
-      uint32_t wh = hash(w.str, w.pos_tag);
+      uint32_t wh = hash(w.word_id, w.pos_tag);
       e.hashes.push_back(wh);
-      e.subwords.push_back(find(w.str, wh, w.pos_tag));
+      e.subwords.push_back(find(w.word_id, wh, w.pos_tag));
     }
 
     words_.push_back(e);
@@ -331,6 +332,7 @@ Dictionary::extractSubwords(const std::string& s)const{
 }
 
 void Dictionary::initSubwords(){
+  //this function is invoked when creating dict first time
   auto sz = size_;
   int64_t minThreshold = 1;
   for (size_t i = 0; i < sz; i++) {
@@ -338,8 +340,8 @@ void Dictionary::initSubwords(){
       continue;
     words_[i].subwords.clear();
     words_[i].subwords.push_back(i);
-    if (words_[i].word != EOS) {
-      auto subwords = extractSubwords(words_[i].word);
+    if (words_[i].word_str != EOS) {
+      auto subwords = extractSubwords(words_[i].word_str);
 
       for(const auto& subword : subwords){
         auto [h, pos] = addSubword(subword);
@@ -595,6 +597,7 @@ int32_t Dictionary::getLine(
 int32_t Dictionary::getLine(std::istream& in,
                             compact_line_t& line,
                             std::minstd_rand& rng) const{
+  //this function is used when training via skipgramp/syntax_skipgram
 
   std::uniform_real_distribution<> uniform(0, 1);
   int32_t ntokens = 0;
@@ -607,8 +610,8 @@ int32_t Dictionary::getLine(std::istream& in,
   }
 
 
-  auto get_id_func = [this](const char* str, uint8_t pos_tag){
-    auto h = find(str, pos_tag, entry_type::word);
+  auto get_id_func = [this](const char* word_id, uint8_t pos_tag){
+    auto h = find(word_id, pos_tag, entry_type::word);
     return word2int_[h];
   };
   parse_from_json(json, get_id_func, line);
@@ -737,6 +740,7 @@ void Dictionary::load(std::istream& in) {
     while ((c = in.get()) != 0) {
       e.word.push_back(c);
     }
+    //word_str is not saved, not restored
     char p;
     in.get(p);
     e.pos_tag = p;
@@ -782,6 +786,7 @@ void Dictionary::init() {
 }
 
 void Dictionary::initSubwordsPos(){
+  //this function is invoked every time dict is loaded
   for (size_t i = 0; i < size_; i++) {
     auto& w = words_[i];
     // if (w.type != entry_type::word and w.type != entry_type::phrase)

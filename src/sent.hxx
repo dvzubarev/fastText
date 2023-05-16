@@ -43,6 +43,7 @@ struct base_line_handler_t : public rapidjson::BaseReaderHandler<utf_traits_t,
     sComponent,
     sWordObj,
     sWordStrVal,
+    sWordIdVal,
     sWordPosTagVal,
     sWordParentOffsVal,
     sWordSyntRelVal,
@@ -189,6 +190,9 @@ struct base_line_handler_t : public rapidjson::BaseReaderHandler<utf_traits_t,
     case 'w':
       state_ = sWordStrVal;
       return true;
+    case 'i':
+      state_ = sWordIdVal;
+      return true;
     case 'p':
       state_ = sWordPosTagVal;
       return true;
@@ -209,6 +213,11 @@ struct base_line_handler_t : public rapidjson::BaseReaderHandler<utf_traits_t,
   }
   inline bool on_word_str_val(){
     auto ret = _impl().set_word_str();
+    state_ = sWordObj;
+    return ret;
+  }
+  inline bool on_word_id_val(){
+    auto ret = _impl().set_word_id();
     state_ = sWordObj;
     return ret;
   }
@@ -269,6 +278,7 @@ struct base_line_handler_t : public rapidjson::BaseReaderHandler<utf_traits_t,
     case sComponent: return on_component_val();
     case sWordObj: return on_word_obj();
     case sWordStrVal: return on_word_str_val();
+    case sWordIdVal: return on_word_id_val();
     case sWordPosTagVal: return on_word_pos_tag_val();
     case sWordParentOffsVal: return on_word_parent_offs_val();
     case sWordSyntRelVal: return on_word_synt_rel_val();
@@ -405,6 +415,11 @@ struct line_handler_t : public base_line_handler_t<line_handler_t, handler_trait
     w->str = val_;
     return true;
   }
+  inline bool set_word_id(){
+    word_t* w = current_word();
+    w->word_id = val_;
+    return true;
+  }
   inline bool set_pos_tag(){
     word_t* w = current_word();
     w->pos_tag = num_val_.u;
@@ -455,6 +470,9 @@ struct line_handler_t : public base_line_handler_t<line_handler_t, handler_trait
 
 
   inline bool word_object_end(){
+    word_t* w = current_word();
+    if (w->word_id == nullptr)
+      w->word_id = w->str;
     return true;
   }
 
@@ -480,6 +498,7 @@ struct compact_line_handler_t : public base_line_handler_t<compact_line_handler_
                                                                get_id_func_(cb){}
 
   const GetIdFunc& get_id_func_;
+  const char* cur_id_ = nullptr;
   const char* cur_str_ = nullptr;
   uint8_t cur_pos_tag_ = 0;
 
@@ -489,6 +508,10 @@ struct compact_line_handler_t : public base_line_handler_t<compact_line_handler_
 
   inline bool set_word_str(){
     cur_str_ = this->val_;
+    return true;
+  }
+  inline bool set_word_id(){
+    cur_id_ = this->val_;
     return true;
   }
   inline bool set_pos_tag(){
@@ -549,14 +572,15 @@ struct compact_line_handler_t : public base_line_handler_t<compact_line_handler_
   }
 
   inline bool word_object_end(){
-    if (!cur_str_){
-      this->err_ = "str is empty!";
+    if (!cur_id_ && !cur_str_){
+      this->err_ = "word_id and word str is empty!";
       return false;
     }
 
-    int32_t num = get_id_func_(cur_str_, cur_pos_tag_);
+    int32_t num = get_id_func_((cur_id_ == nullptr) ? cur_str_ : cur_id_, cur_pos_tag_);
     this->current_word()->num = num;
 
+    cur_id_ = nullptr;
     cur_str_ = nullptr;
     cur_pos_tag_ = 0;
 

@@ -46,6 +46,7 @@ inline entry_type combine(EntryTypes... rest){
 
 struct entry {
   std::string word;
+  std::string word_str;
   int64_t count;
   std::vector<int32_t> subwords;
   std::vector<uint32_t> hashes;

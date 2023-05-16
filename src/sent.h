@@ -15,7 +15,8 @@ struct word_t{
   int16_t parent_offs;
 
   // uint64_t hash_;
-  const char* str;
+  const char* str = nullptr;
+  const char* word_id = nullptr;
 
 };
 
