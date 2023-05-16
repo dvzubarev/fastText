@@ -150,9 +150,10 @@ void FastText::saveVectors(const std::string& filename) {
     throw std::invalid_argument(
         filename + " cannot be opened for saving vectors!");
   }
-  ofs << dict_->size() << " " << args_->dim << std::endl;
+  auto vocab_sz = dict_->size(combine(entry_type::word, entry_type::phrase));
+  ofs << vocab_sz << " " << args_->dim << std::endl;
   Vector vec(args_->dim);
-  for (int32_t i = 0; i < dict_->size(); i++) {
+  for (int32_t i = 0; i < vocab_sz; i++) {
     std::string word = dict_->getWord(i);
     getWordVector(vec, i);
     ofs << word << " " << vec << std::endl;
