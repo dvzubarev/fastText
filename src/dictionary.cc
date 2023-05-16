@@ -793,10 +793,14 @@ void Dictionary::initSubwordsPos(){
     if (w.type == entry_type::label)
       continue;
 
+    auto find_type = entry_type::subword;
+    if (w.type == entry_type::phrase)
+      find_type = entry_type::word;
+
     w.subwords.clear();
     w.subwords.push_back(i);
     for(auto h : w.hashes){
-      auto id = find(h, entry_type::subword);
+      auto id = find(h, find_type);
       auto pos = word2int_[id];
       if (pos != -1)
         w.subwords.push_back(pos);
