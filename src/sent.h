@@ -43,7 +43,7 @@ void make_aux_offs(std::vector<compact_word_t>& words);
 
 
 struct phrase_t : public word_t{
-  static constexpr size_t MAX_PHRASE_SIZE = 3;
+  static constexpr size_t MAX_PHRASE_SIZE = 10;
 
   std::array<int16_t, MAX_PHRASE_SIZE> components;
   uint8_t sz = 0;
