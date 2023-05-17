@@ -327,8 +327,8 @@ void Dictionary::computeSubwords(
 
 std::vector<std::string>
 Dictionary::extractSubwords(const std::string& s)const{
-  auto variants = encoder_->apply(s, 3);
-  return fastBPE::uniq_subwords(variants, 3);
+  auto variants = encoder_->apply(s, args_->maxBpeVars);
+  return fastBPE::uniq_subwords(variants, args_->minn);
 }
 
 void Dictionary::initSubwords(){

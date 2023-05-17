@@ -31,6 +31,7 @@ Args::Args() {
   bucket = 6000000;
   minn = 3;
   maxn = 6;
+  maxBpeVars = 3;
   thread = 12;
   lrUpdateRate = 300;
   t = 1e-4;
@@ -84,6 +85,10 @@ std::string Args::modelToString(model_name mn) const {
       return "sg";
     case model_name::sup:
       return "sup";
+    case model_name::syntax_sg:
+      return "syntax_sg";
+    case model_name::hybrid_sg:
+      return "hybrid_sg";
   }
   return "Unknown model name!"; // should never happen
 }
@@ -182,6 +187,8 @@ void Args::parseArgs(const std::vector<std::string>& args) {
         minn = std::stoi(args.at(ai + 1));
       } else if (args[ai] == "-maxn") {
         maxn = std::stoi(args.at(ai + 1));
+      } else if (args[ai] == "-maxBpeVars") {
+        maxBpeVars = std::stoi(args.at(ai + 1));
       } else if (args[ai] == "-thread") {
         thread = std::stoi(args.at(ai + 1));
       } else if (args[ai] == "-t") {
@@ -277,6 +284,8 @@ void Args::printDictionaryHelp() {
             << "]\n"
             << "  -maxn               max length of char ngram [" << maxn
             << "]\n"
+            << "  -maxBpeVars         max variants of bpe segmentation [" << maxBpeVars
+            << "]\n"
             << "  -t                  sampling threshold [" << t << "]\n"
             << "  -label              labels prefix [" << label << "]\n";
 }
@@ -350,6 +359,7 @@ void Args::save(std::ostream& out) {
   out.write((char*)&(bucket), sizeof(int));
   out.write((char*)&(minn), sizeof(int));
   out.write((char*)&(maxn), sizeof(int));
+  out.write((char*)&(maxBpeVars), sizeof(int));
   out.write((char*)&(lrUpdateRate), sizeof(int));
   out.write((char*)&(t), sizeof(double));
   out.write((char*)&(addSentFeats), sizeof(int));
@@ -367,6 +377,7 @@ void Args::load(std::istream& in) {
   in.read((char*)&(bucket), sizeof(int));
   in.read((char*)&(minn), sizeof(int));
   in.read((char*)&(maxn), sizeof(int));
+  in.read((char*)&(maxBpeVars), sizeof(int));
   in.read((char*)&(lrUpdateRate), sizeof(int));
   in.read((char*)&(t), sizeof(double));
   in.read((char*)&(addSentFeats), sizeof(int));
@@ -395,6 +406,8 @@ void Args::dump(std::ostream& out) const {
       << " " << minn << std::endl;
   out << "maxn"
       << " " << maxn << std::endl;
+  out << "maxBpeVars"
+      << " " << maxBpeVars << std::endl;
   out << "lrUpdateRate"
       << " " << lrUpdateRate << std::endl;
   out << "t"

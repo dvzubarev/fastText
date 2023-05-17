@@ -52,6 +52,7 @@ class Args {
   int bucket;
   int minn;
   int maxn;
+  int maxBpeVars;
   int thread;
   double t;
   std::string label;
