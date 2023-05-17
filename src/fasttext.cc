@@ -1003,7 +1003,7 @@ void FastText::trainThread(int32_t threadId, const TrainCallback& callback) {
 
   Model::State state(args_->dim, output_->size(0), threadId + args_->seed);
 
-  const int64_t ntokens = dict_->ntokens();
+  const int64_t ntokens = args_->ntokensUp ? args_->ntokensUp : dict_->ntokens();
   int64_t localTokenCount = 0;
   // std::vector<int32_t> line, labels;
   compact_line_t line;
@@ -1179,7 +1179,7 @@ void FastText::startThreads(const TrainCallback& callback) {
     // webassembly can't instantiate `std::thread`
     trainThread(0, callback);
   }
-  const int64_t ntokens = dict_->ntokens();
+  const int64_t ntokens = args_->ntokensUp ? args_->ntokensUp : dict_->ntokens();
   // Same condition as trainThread
   while (keepTraining(ntokens)) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));

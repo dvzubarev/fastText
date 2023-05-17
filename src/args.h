@@ -43,6 +43,7 @@ class Args {
   int dim;
   int ws;
   int epoch;
+  int ntokensUp;
   int minCount;
   int minCountLabel;
   int neg;

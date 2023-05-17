@@ -22,6 +22,7 @@ Args::Args() {
   dim = 100;
   ws = 5;
   epoch = 5;
+  ntokensUp=0;
   minCount = 5;
   minCountLabel = 0;
   neg = 5;
@@ -158,6 +159,8 @@ void Args::parseArgs(const std::vector<std::string>& args) {
         ws = std::stoi(args.at(ai + 1));
       } else if (args[ai] == "-epoch") {
         epoch = std::stoi(args.at(ai + 1));
+      } else if (args[ai] == "-ntokensUp") {
+        ntokensUp = std::stoi(args.at(ai + 1));
       } else if (args[ai] == "-minCount") {
         minCount = std::stoi(args.at(ai + 1));
       } else if (args[ai] == "-minCountLabel") {
@@ -300,6 +303,7 @@ void Args::printTrainingHelp() {
       << "  -dim                size of word vectors [" << dim << "]\n"
       << "  -ws                 size of the context window [" << ws << "]\n"
       << "  -epoch              number of epochs [" << epoch << "]\n"
+      << "  -ntokensUp          number of token updates [" << ntokensUp << "]\n"
       << "  -neg                number of negatives sampled [" << neg << "]\n"
       << "  -loss               loss function {ns, hs, softmax, one-vs-all} ["
       << lossToString(loss) << "]\n"
@@ -351,6 +355,7 @@ void Args::save(std::ostream& out) {
   out.write((char*)&(dim), sizeof(int));
   out.write((char*)&(ws), sizeof(int));
   out.write((char*)&(epoch), sizeof(int));
+  out.write((char*)&(ntokensUp), sizeof(int));
   out.write((char*)&(minCount), sizeof(int));
   out.write((char*)&(neg), sizeof(int));
   out.write((char*)&(wordNgrams), sizeof(int));
@@ -369,6 +374,7 @@ void Args::load(std::istream& in) {
   in.read((char*)&(dim), sizeof(int));
   in.read((char*)&(ws), sizeof(int));
   in.read((char*)&(epoch), sizeof(int));
+  in.read((char*)&(ntokensUp), sizeof(int));
   in.read((char*)&(minCount), sizeof(int));
   in.read((char*)&(neg), sizeof(int));
   in.read((char*)&(wordNgrams), sizeof(int));
@@ -390,6 +396,8 @@ void Args::dump(std::ostream& out) const {
       << " " << ws << std::endl;
   out << "epoch"
       << " " << epoch << std::endl;
+  out << "ntokensUp"
+      << " " << ntokensUp << std::endl;
   out << "minCount"
       << " " << minCount << std::endl;
   out << "neg"
