@@ -79,6 +79,8 @@ class FastText {
   void skipgram(Model::State& state, real lr, const compact_line_t& line);
   void updateModelOnWords(Model::State& state, real lr,
                           const words_array_t& words);
+  void updateModelOnPhrases(Model::State& state, real lr,
+                            const words_array_t& phrases);
   void updateModelOnWordsContext(Model::State& state, real lr,
                                  const std::vector<int32_t>& feats,
                                  const words_array_t& words,

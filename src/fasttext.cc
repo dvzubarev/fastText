@@ -423,11 +423,16 @@ void FastText::skipgram(
     real lr,
     const compact_line_t& line) {
   updateModelOnWords(state, lr, line.target.words);
+  updateModelOnPhrases(state, lr, line.target.phrases);
 
   for (const auto& os : line.other_langs){
     updateModelOnWords(state, lr, os.words);
     mapOtherLangToTarget(state, lr, line.target.words, os.words,
                          os.mapping_to_target_words);
+
+    updateModelOnPhrases(state, lr, os.phrases);
+    mapOtherLangToTarget(state, lr, line.target.phrases, os.phrases,
+                         os.mapping_to_target_phrases);
   }
 
 }
@@ -471,6 +476,25 @@ void FastText::updateModelOnWords(Model::State& state, real lr,
   }
 
 }
+void FastText::updateModelOnPhrases(Model::State& state, real lr,
+                                    const words_array_t& phrases){
+  std::uniform_int_distribution<> uniform(1, args_->ws);
+  for (int32_t w = 0; w < phrases.size(); w++) {
+    if(not phrases[w].is_phrase or phrases[w].num == -1 )
+      continue;
+
+    const std::vector<int32_t>& feats = dict_->getSubwords(phrases[w].num);
+
+    updateModelOnWordsContext(state, lr, feats, phrases, w, uniform);
+
+    //TODO is this necessary
+    std::vector<int32_t> only_words(feats.size()-1);
+    std::copy(std::begin(feats)+1, std::end(feats), std::begin(only_words));
+    model_->update(only_words, phrases, w, lr, state);
+  }
+
+}
+
 void FastText::mapOtherLangToTarget(Model::State& state, real lr,
                                     const words_array_t& target_sent,
                                     const words_array_t& other_sent,
