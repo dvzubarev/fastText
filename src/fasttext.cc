@@ -499,6 +499,8 @@ void FastText::mapOtherLangToTarget(Model::State& state, real lr,
                                     const words_array_t& target_sent,
                                     const words_array_t& other_sent,
                                     const std::vector<int16_t>& mapping){
+  if (mapping.empty())
+    return;
   std::uniform_int_distribution<> uniform(1, args_->ws);
   for(int i=0;i<other_sent.size();++i){
     if (other_sent[i].num == -1)
