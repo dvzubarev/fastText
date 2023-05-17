@@ -530,6 +530,33 @@ void FastText::syntax_skipgram(Model::State& state, real lr, const compact_line_
   }
 }
 
+void FastText::hybrid_skipgram(Model::State& state, real lr, const compact_line_t& line){
+  updateModelOnWords(state, lr, line.target.words);
+  updateModelOnPhrases(state, lr, line.target.phrases);
+
+  updateModelOnWordsSyntax(state, lr, line.target.words, line.target.concepts);
+  updateModelOnPhrasesSyntax(state, lr, line.target.phrases, line.target.concepts);
+
+  for (const auto& os : line.other_langs){
+    updateModelOnWords(state, lr, os.words);
+    mapOtherLangToTarget(state, lr, line.target.words, os.words,
+                         os.mapping_to_target_words);
+
+    updateModelOnWordsSyntax(state, lr, os.words, os.concepts);
+    mapOtherLangToTargetSyntax(state, lr, line.target.words, os.words,
+                               os.mapping_to_target_words, os.concepts);
+
+
+    updateModelOnPhrases(state, lr, os.phrases);
+    mapOtherLangToTarget(state, lr, line.target.phrases, os.phrases,
+                         os.mapping_to_target_phrases);
+
+    updateModelOnPhrasesSyntax(state, lr, os.phrases, os.concepts);
+    mapOtherLangToTargetSyntax(state, lr, line.target.phrases, os.phrases,
+                               os.mapping_to_target_phrases, os.concepts);
+  }
+}
+
 std::vector<int32_t> FastText::combineFeats(Model::State& state,
                                             const std::vector<int32_t>& feats,
                                             const std::vector<int32_t>& sent_feats){
@@ -1005,7 +1032,11 @@ void FastText::trainThread(int32_t threadId, const TrainCallback& callback) {
       } else if (args_->model == model_name::syntax_sg) {
         localTokenCount += dict_->getLine(ifs, line, state.rng);
         syntax_skipgram(state, lr, line);
-      }else throw std::runtime_error("Unsupported model!");
+      } else if (args_->model == model_name::hybrid_sg){
+        localTokenCount += dict_->getLine(ifs, line, state.rng);
+        hybrid_skipgram(state, lr, line);
+      }
+      else throw std::runtime_error("Unsupported model!");
       if (localTokenCount > args_->lrUpdateRate) {
         tokenCount_ += localTokenCount;
         localTokenCount = 0;

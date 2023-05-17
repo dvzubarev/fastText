@@ -117,8 +117,11 @@ void Args::parseArgs(const std::vector<std::string>& args) {
     lr = 0.1;
   } else if (command == "cbow") {
     model = model_name::cbow;
-  } else if (command == "syntax_skipgram")
+  } else if (command == "syntax_skipgram"){
     model = model_name::syntax_sg;
+  } else if (command == "hybrid_skipgram")
+    model = model_name::hybrid_sg;
+
   for (int ai = 2; ai < args.size(); ai += 2) {
     if (args[ai][0] != '-') {
       std::cerr << "Provided argument without a dash! Usage:" << std::endl;

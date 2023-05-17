@@ -34,6 +34,7 @@ void printUsage() {
          "probabilities\n"
       << "  skipgram                train a skipgram model\n"
       << "  syntax_skipgram         train a syntax-skipgram model\n"
+      << "  hybrid_skipgram         train a classic skipgram model + use syntax context\n"
       << "  cbow                    train a cbow model\n"
       << "  print-word-vectors      print word vectors given a trained model\n"
       << "  print-sentence-vectors  print sentence vectors given a trained "
@@ -548,7 +549,7 @@ int main(int argc, char** argv) {
     exit(EXIT_FAILURE);
   }
   std::string command(args[1]);
-  if (command == "skipgram" || command == "syntax_skipgram" ||
+  if (command == "skipgram" || command == "syntax_skipgram" || command == "hybrid_skipgram" ||
       command == "cbow" || command == "supervised") {
     train(args);
   } else if (command == "test" || command == "test-label") {
