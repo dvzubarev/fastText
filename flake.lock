@@ -2,16 +2,16 @@
   "nodes": {
     "nixpkgs": {
       "locked": {
-        "lastModified": 1642091568,
-        "narHash": "sha256-K4b5ibkreQZG/YZUR4mnt4DdbqBBcm7YigQGirSQ1cE=",
+        "lastModified": 1677852945,
+        "narHash": "sha256-liiVJjkBTuBTAkRW3hrI8MbPD2ImYzwUpa7kvteiKhM=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "93a324cd589e1069e206147a23e5d7921d1ecb46",
+        "rev": "f5ffd5787786dde3a8bf648c7a1b5f78c4e01abb",
         "type": "github"
       },
       "original": {
         "id": "nixpkgs",
-        "rev": "93a324cd589e1069e206147a23e5d7921d1ecb46",
+        "rev": "f5ffd5787786dde3a8bf648c7a1b5f78c4e01abb",
         "type": "indirect"
       }
     },
@@ -25,16 +25,15 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1659697165,
-        "narHash": "sha256-1oekbUtDAA5q4Jcj/gkMuJlOmxx1HegkLETxiJhTDUI=",
-        "ref": "flakes",
-        "rev": "55d6fdb4befda06cef263141158f4e3e37b575bd",
-        "revCount": 120,
+        "lastModified": 1684327115,
+        "narHash": "sha256-D8RFYMmTqvjr4dnREXfjAelto36gwbiSG5uXmo0z9YQ=",
+        "ref": "refs/heads/master",
+        "rev": "226dcd33776fb5ea6e3c7062f8a06458b07bad02",
+        "revCount": 170,
         "type": "git",
         "url": "ssh://git@tsa04.isa.ru/textapp/textapp-pkgs"
       },
       "original": {
-        "ref": "flakes",
         "type": "git",
         "url": "ssh://git@tsa04.isa.ru/textapp/textapp-pkgs"
       }
