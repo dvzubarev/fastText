@@ -21,17 +21,24 @@ struct word_t{
 };
 
 struct compact_word_t{
+  constexpr static int BITS_PER_PARENT_OFFS = 8;
   constexpr static int BITS_PER_OFFS = 6;
-  static inline int8_t offs_to_bits(int i){
-    if (std::abs(i) <= (1<<(BITS_PER_OFFS-1))-1)
+
+  static inline int8_t offs_to_bits_impl(int i, const int bits_per_offs){
+    if (std::abs(i) <= (1<<(bits_per_offs-1))-1)
       return i;
     return 0;
   }
+  static inline int8_t offs_to_bits(int i){
+    return offs_to_bits_impl(i, BITS_PER_OFFS);
+  }
+  static inline int8_t parent_offs_to_bits(int i){
+    return offs_to_bits_impl(i, BITS_PER_PARENT_OFFS);
+  }
 
   uint32_t is_phrase:1 = false;
-  int32_t _reserved1:1;
-  uint32_t synt_rel:6 = 0;
-  int32_t parent_offs:6 = 0;
+  uint32_t synt_rel:5 = 0;
+  int32_t parent_offs:8 = 0;
   int32_t first_child_offs:6 = 0;
   int32_t prev_sibling_offs:6 = 0;
   int32_t next_sibling_offs:6 = 0;

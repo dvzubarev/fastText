@@ -520,12 +520,15 @@ struct compact_line_handler_t : public base_line_handler_t<compact_line_handler_
   }
   inline bool set_parent_offs(){
     word_type* w = this->current_word();
-    w->parent_offs = compact_word_t::offs_to_bits(this->num_val_.i);
+    w->parent_offs = compact_word_t::parent_offs_to_bits(this->num_val_.i);
     return true;
   }
   inline bool set_synt_rel(){
     word_type* w = this->current_word();
-    w->synt_rel = this->num_val_.u;
+    if (this->num_val_.u >= 32)
+      w->synt_rel = 31;
+    else
+      w->synt_rel = this->num_val_.u;
     return true;
   }
 
