@@ -217,9 +217,9 @@ const std::vector<int32_t>& Dictionary::getSubwords(int32_t i) const {
   return words_[i].subwords;
 }
 
-const std::vector<int32_t> Dictionary::getSubwords(
-  const std::string& word, uint8_t pos_tag) const {
-  int32_t i = getId(word, pos_tag, entry_type::word);
+const std::vector<int32_t>
+Dictionary::getSubwords(const std::string& word, uint8_t pos_tag) const {
+  int32_t i = getId(word, pos_tag);
   if (i >= 0) {
     return getSubwords(i);
   }

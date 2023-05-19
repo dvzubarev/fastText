@@ -344,8 +344,9 @@ void nn(const std::vector<std::string> args) {
   std::cout << prompt;
 
   std::string queryWord;
-  int posTag;
-  while (std::cin >> queryWord >> posTag) {
+  //We dont use postag for now
+  int posTag = 0;
+  while (std::cin >> queryWord) {
     printPredictions(fasttext.getNN(queryWord, posTag, k, allowedTypes), true, true);
     std::cout << prompt;
   }
