@@ -631,6 +631,9 @@ mapOtherLangToTargetSyntax(Model::State& state, real lr,
                            const words_array_t& target_sent, const words_array_t& other_sent,
                            const std::vector<int16_t>& mapping,
                            const std::vector<int32_t>& sent_feats){
+  if (mapping.empty())
+    return;
+
   for(int i=0;i<other_sent.size();++i){
     if (other_sent[i].num == -1)
       continue;
