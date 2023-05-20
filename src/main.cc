@@ -410,6 +410,8 @@ void train(const std::vector<std::string> args) {
     fasttext->train(a);
   }
   fasttext->saveModel(outputFileName);
+  if (!a.outputModel.empty())
+    fasttext->saveModel(a.outputModel + ".bin");
   fasttext->saveVectors(a.output + ".vec");
   if (a.saveOutput) {
     fasttext->saveOutput(a.output + ".output");

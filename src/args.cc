@@ -23,7 +23,6 @@ Args::Args() {
   ws = 5;
   epoch = 5;
   ntokensUp=0;
-  nepoch = -1;
   minCount = 5;
   minCountLabel = 0;
   neg = 5;
@@ -148,11 +147,12 @@ void Args::parseArgs(const std::vector<std::string>& args) {
         dicPath = std::string(args.at(ai + 1));
       }else if (args[ai] == "-codes") {
         bpeCodesPath = std::string(args.at(ai + 1));
-      }else if (args[ai] == "-output") {
       } else if (args[ai] == "-inputModel") {
         inputModel = std::string(args.at(ai + 1));
       } else if (args[ai] == "-output") {
         output = std::string(args.at(ai + 1));
+      } else if (args[ai] == "-outputModel") {
+        outputModel = std::string(args.at(ai + 1));
       } else if (args[ai] == "-lr") {
         lr = std::stof(args.at(ai + 1));
       } else if (args[ai] == "-lrUpdateRate") {
@@ -165,8 +165,6 @@ void Args::parseArgs(const std::vector<std::string>& args) {
         epoch = std::stoi(args.at(ai + 1));
       } else if (args[ai] == "-ntokensUp") {
         ntokensUp = std::stoi(args.at(ai + 1));
-      } else if (args[ai] == "-nepoch") {
-        nepoch = std::stoi(args.at(ai + 1));
       } else if (args[ai] == "-minCount") {
         minCount = std::stoi(args.at(ai + 1));
       } else if (args[ai] == "-minCountLabel") {
@@ -258,11 +256,6 @@ void Args::parseArgs(const std::vector<std::string>& args) {
     printHelp();
     exit(EXIT_FAILURE);
   }
-  if (0 < nepoch && inputModel.empty()) {
-    std::cerr << "Empty input model." << std::endl;
-    printHelp();
-    exit(EXIT_FAILURE);
-  }
   if (wordNgrams <= 1 && maxn == 0 && !hasAutotune()) {
     bucket = 0;
   }
@@ -315,7 +308,6 @@ void Args::printTrainingHelp() {
       << "  -ws                 size of the context window [" << ws << "]\n"
       << "  -epoch              number of epochs [" << epoch << "]\n"
       << "  -ntokensUp          number of token updates [" << ntokensUp << "]\n"
-      << "  -nepoch             in incremental training, 0-based epoch index [" << nepoch << "]\n"
       << "  -neg                number of negatives sampled [" << neg << "]\n"
       << "  -loss               loss function {ns, hs, softmax, one-vs-all} ["
       << lossToString(loss) << "]\n"
@@ -329,8 +321,9 @@ void Args::printTrainingHelp() {
       << boolToString(saveOutput) << "]\n"
       << "  -seed               random generator seed  [" << seed << "]\n"
       << "  -addSentFeats       chance of adding sent feats to word feats (0-10):"
-    " 0 means 0% chance, 10 means 100% chance [" << addSentFeats << "]\n";
-      << "  -inputModel         saved checkpointed model file path (only for incremental training)\n";
+    " 0 means 0% chance, 10 means 100% chance [" << addSentFeats << "]\n"
+      << "  -inputModel         saved checkpointed model file path (only for incremental training)\n"
+      << "  -outputModel        save model for later training resume\n";
 }
 
 void Args::printAutotuneHelp() {
