@@ -89,6 +89,9 @@ class FastText {
   void mapOtherLangToTarget(Model::State& state, real lr,
                             const words_array_t& target, const words_array_t& other,
                             const std::vector<int16_t>& mapping);
+  void mapOtherLangToTargetPhrases(Model::State& state, real lr,
+                                   const words_array_t& target, const words_array_t& other,
+                                   const std::vector<int16_t>& mapping);
 
   void syntax_skipgram(Model::State& state, real lr, const compact_line_t& line);
   void updateModelOnWordsSyntax(Model::State& state, real lr,
@@ -101,8 +104,13 @@ class FastText {
                                   const words_array_t& target, const words_array_t& other,
                                   const std::vector<int16_t>& mapping,
                                   const std::vector<int32_t>& sent_feats);
+  void mapOtherLangToTargetPhrasesSyntax(Model::State& state, real lr,
+                                         const words_array_t& target, const words_array_t& other,
+                                         const std::vector<int16_t>& mapping,
+                                         const std::vector<int32_t>& sent_feats);
   void hybrid_skipgram(Model::State& state, real lr, const compact_line_t& line);
 
+  std::vector<int32_t> getSubwordFeats(int32_t num)const;
   std::vector<int32_t> combineFeats(Model::State& state,
                                     const std::vector<int32_t>& feats,
                                     const std::vector<int32_t>& sent_feats);

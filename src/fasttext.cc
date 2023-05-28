@@ -112,7 +112,7 @@ int32_t FastText::getLabelId(const std::string& label) const {
 }
 
 bool FastText::getWordVector(Vector& vec, int32_t i) const {
-  const std::vector<int32_t>& ngrams = dict_->getSubwords(i);
+  const std::vector<int32_t>& ngrams = getSubwordFeats(i);
   return getWordVector(vec, ngrams);
 }
 
@@ -431,8 +431,8 @@ void FastText::skipgram(
                          os.mapping_to_target_words);
 
     updateModelOnPhrases(state, lr, os.phrases);
-    mapOtherLangToTarget(state, lr, line.target.phrases, os.phrases,
-                         os.mapping_to_target_phrases);
+    mapOtherLangToTargetPhrases(state, lr, line.target.phrases, os.phrases,
+                                os.mapping_to_target_phrases);
   }
 
 }
@@ -469,7 +469,7 @@ void FastText::updateModelOnWords(Model::State& state, real lr,
   for (int32_t w = 0; w < words.size(); w++) {
     if( words[w].num == -1 )
       continue;
-    const std::vector<int32_t>& feats = dict_->getSubwords(words[w].num);
+    const std::vector<int32_t>& feats = getSubwordFeats(words[w].num);
 
     updateModelOnWordsContext(state, lr, feats, words, w, uniform);
 
@@ -510,6 +510,30 @@ void FastText::mapOtherLangToTarget(Model::State& state, real lr,
     if(target_pos == -1 or target_sent[target_pos].num == -1)
       continue;
 
+    const std::vector<int32_t>& feats = getSubwordFeats(other_sent[i].num);
+
+    model_->update(feats, target_sent, target_pos, lr, state);
+
+    updateModelOnWordsContext(state, lr, feats, target_sent, target_pos, uniform);
+  }
+
+}
+
+void FastText::mapOtherLangToTargetPhrases(Model::State& state, real lr,
+                                           const words_array_t& target_sent,
+                                           const words_array_t& other_sent,
+                                           const std::vector<int16_t>& mapping){
+  if (mapping.empty())
+    return;
+  std::uniform_int_distribution<> uniform(1, args_->ws);
+  for(int i=0;i<other_sent.size();++i){
+    if (!other_sent[i].is_phrase || other_sent[i].num == -1)
+      continue;
+
+    auto target_pos = mapping[i];
+    if(target_pos == -1 or target_sent[target_pos].num == -1)
+      continue;
+
     const std::vector<int32_t>& feats = dict_->getSubwords(other_sent[i].num);
 
     model_->update(feats, target_sent, target_pos, lr, state);
@@ -527,8 +551,8 @@ void FastText::syntax_skipgram(Model::State& state, real lr, const compact_line_
     mapOtherLangToTargetSyntax(state, lr, line.target.words, os.words,
                                os.mapping_to_target_words, os.concepts);
     updateModelOnPhrasesSyntax(state, lr, os.phrases, os.concepts);
-    mapOtherLangToTargetSyntax(state, lr, line.target.phrases, os.phrases,
-                               os.mapping_to_target_phrases, os.concepts);
+    mapOtherLangToTargetPhrasesSyntax(state, lr, line.target.phrases, os.phrases,
+                                      os.mapping_to_target_phrases, os.concepts);
   }
 }
 
@@ -550,12 +574,12 @@ void FastText::hybrid_skipgram(Model::State& state, real lr, const compact_line_
 
 
     updateModelOnPhrases(state, lr, os.phrases);
-    mapOtherLangToTarget(state, lr, line.target.phrases, os.phrases,
-                         os.mapping_to_target_phrases);
+    mapOtherLangToTargetPhrases(state, lr, line.target.phrases, os.phrases,
+                                os.mapping_to_target_phrases);
 
     updateModelOnPhrasesSyntax(state, lr, os.phrases, os.concepts);
-    mapOtherLangToTargetSyntax(state, lr, line.target.phrases, os.phrases,
-                               os.mapping_to_target_phrases, os.concepts);
+    mapOtherLangToTargetPhrasesSyntax(state, lr, line.target.phrases, os.phrases,
+                                      os.mapping_to_target_phrases, os.concepts);
   }
 }
 
@@ -575,6 +599,16 @@ std::vector<int32_t> FastText::combineFeats(Model::State& state,
   return feats;
 }
 
+std::vector<int32_t> FastText::getSubwordFeats(int32_t num)const{
+  std::vector<int32_t> feats;
+  if (args_->maxn == 0) {
+    feats.push_back(num);
+  }else{
+    feats = dict_->getSubwords(num);
+  }
+  return feats;
+}
+
 void FastText::updateModelOnWordsSyntax(Model::State& state, real lr,
                                         const words_array_t& words,
                                         const std::vector<int32_t>& sent_feats){
@@ -583,7 +617,7 @@ void FastText::updateModelOnWordsSyntax(Model::State& state, real lr,
     if( words[w].num == -1 )
       continue;
     std::vector<int32_t> feats = combineFeats(state,
-                                              dict_->getSubwords(words[w].num),
+                                              getSubwordFeats(words[w].num),
                                               sent_feats);
 
     auto update_func = [&](int32_t pos){
@@ -636,6 +670,39 @@ mapOtherLangToTargetSyntax(Model::State& state, real lr,
 
   for(int i=0;i<other_sent.size();++i){
     if (other_sent[i].num == -1)
+      continue;
+
+    auto target_pos = mapping[i];
+    if(target_pos == -1 or target_sent[target_pos].num == -1)
+      continue;
+
+    std::vector<int32_t> feats = combineFeats(state,
+                                              getSubwordFeats(other_sent[i].num),
+                                              sent_feats);
+
+    auto update_func = [&](int32_t pos){
+      model_->update(feats, target_sent, pos, lr, state);
+    };
+    update_func(target_pos);
+
+    callOnAllSiblings(target_sent, target_pos, update_func);
+    callOnChilds(target_sent, target_pos, update_func);
+    callOnHeads(target_sent, target_pos, update_func);
+  }
+
+}
+
+void
+FastText::
+mapOtherLangToTargetPhrasesSyntax(Model::State& state, real lr,
+                                  const words_array_t& target_sent, const words_array_t& other_sent,
+                                  const std::vector<int16_t>& mapping,
+                                  const std::vector<int32_t>& sent_feats){
+  if (mapping.empty())
+    return;
+
+  for(int i=0;i<other_sent.size();++i){
+    if (!other_sent[i].is_phrase || other_sent[i].num == -1)
       continue;
 
     auto target_pos = mapping[i];
