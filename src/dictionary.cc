@@ -611,7 +611,7 @@ int32_t Dictionary::getLine(std::istream& in,
 
 
   auto get_id_func = [this](const char* word_id, uint8_t pos_tag){
-    auto h = find(word_id, pos_tag, entry_type::word);
+    auto h = find(word_id, pos_tag);
     return word2int_[h];
   };
   parse_from_json(json, get_id_func, line);
