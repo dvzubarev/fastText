@@ -487,10 +487,6 @@ void FastText::updateModelOnPhrases(Model::State& state, real lr,
 
     updateModelOnWordsContext(state, lr, feats, phrases, w, uniform);
 
-    //TODO is this necessary
-    std::vector<int32_t> only_words(feats.size()-1);
-    std::copy(std::begin(feats)+1, std::end(feats), std::begin(only_words));
-    model_->update(only_words, phrases, w, lr, state);
   }
 
 }
@@ -642,8 +638,6 @@ FastText::updateModelOnPhrasesSyntax(Model::State& state, real lr,
                                               dict_->getSubwords(phrases[w].num),
                                               sent_feats);
 
-    //TODO add subwords of components?
-
     auto update_func = [&](int32_t pos){
       model_->update(feats, phrases, pos, lr, state);
     };
@@ -652,10 +646,6 @@ FastText::updateModelOnPhrasesSyntax(Model::State& state, real lr,
     callOnChilds(phrases, w, update_func);
     callOnHeads(phrases, w, update_func);
 
-
-    std::vector<int32_t> only_words(feats.size()-1);
-    std::copy(std::begin(feats)+1, std::end(feats), std::begin(only_words));
-    model_->update(only_words, phrases, w, lr, state);
   }
 }
 
