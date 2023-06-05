@@ -402,6 +402,14 @@ void train(const std::vector<std::string> args) {
     throw std::invalid_argument(
         outputFileName + " cannot be opened for saving.");
   }
+  if (!a.outputModel.empty()){
+      std::ofstream ofs(a.outputModel + ".bin");
+      if (!ofs.is_open()) {
+        throw std::invalid_argument(
+          a.outputModel + ".bin cannot be opened for saving.");
+      }
+    }
+
   ofs.close();
   if (a.hasAutotune()) {
     Autotune autotune(fasttext);
