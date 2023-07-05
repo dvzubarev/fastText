@@ -418,6 +418,15 @@ void FastText::cbow(
   }
 }
 
+std::vector<int16_t> create_rev_mapping(uint32_t len, const std::vector<int16_t>& mapping){
+  std::vector<int16_t> rev_mapping(len, -1);
+  for (int i = 0; i < mapping.size(); ++i)
+    if (mapping[i] != -1)
+      rev_mapping[mapping[i]] = i;
+
+  return rev_mapping;
+}
+
 void FastText::skipgram(
     Model::State& state,
     real lr,
@@ -429,10 +438,14 @@ void FastText::skipgram(
     updateModelOnWords(state, lr, os.words);
     mapOtherLangToTarget(state, lr, line.target.words, os.words,
                          os.mapping_to_target_words);
+    mapOtherLangToTarget(state, lr, os.words, line.target.words,
+                         create_rev_mapping(line.target.words.size(), os.mapping_to_target_words));
 
     updateModelOnPhrases(state, lr, os.phrases);
     mapOtherLangToTargetPhrases(state, lr, line.target.phrases, os.phrases,
                                 os.mapping_to_target_phrases);
+    mapOtherLangToTargetPhrases(state, lr, os.phrases, line.target.phrases,
+                                create_rev_mapping(line.target.phrases.size(), os.mapping_to_target_phrases));
   }
 
 }
