@@ -482,7 +482,7 @@ void FastText::updateModelOnWords(Model::State& state, real lr,
   for (int32_t w = 0; w < words.size(); w++) {
     if( words[w].num == -1 )
       continue;
-    const std::vector<int32_t>& feats = getSubwordFeats(words[w].num);
+    const std::vector<int32_t>& feats = getWordFeats(words[w]);
 
     updateModelOnWordsContext(state, lr, feats, words, w, uniform);
 
@@ -496,7 +496,7 @@ void FastText::updateModelOnPhrases(Model::State& state, real lr,
     if(not phrases[w].is_phrase or phrases[w].num == -1 )
       continue;
 
-    const std::vector<int32_t>& feats = dict_->getSubwords(phrases[w].num);
+    const std::vector<int32_t>& feats = getWordFeats(phrases[w]);
 
     updateModelOnWordsContext(state, lr, feats, phrases, w, uniform);
 
@@ -519,7 +519,7 @@ void FastText::mapOtherLangToTarget(Model::State& state, real lr,
     if(target_pos == -1 or target_sent[target_pos].num == -1)
       continue;
 
-    const std::vector<int32_t>& feats = getSubwordFeats(other_sent[i].num);
+    const std::vector<int32_t>& feats = getWordFeats(other_sent[i]);
 
     model_->update(feats, target_sent, target_pos, lr, state);
 
@@ -543,7 +543,7 @@ void FastText::mapOtherLangToTargetPhrases(Model::State& state, real lr,
     if(target_pos == -1 or target_sent[target_pos].num == -1)
       continue;
 
-    const std::vector<int32_t>& feats = dict_->getSubwords(other_sent[i].num);
+    const std::vector<int32_t>& feats = getWordFeats(other_sent[i]);
 
     model_->update(feats, target_sent, target_pos, lr, state);
 
@@ -608,6 +608,15 @@ std::vector<int32_t> FastText::combineFeats(Model::State& state,
   return feats;
 }
 
+std::vector<int32_t> FastText::getWordFeats(const compact_word_t& word)const{
+  if (word.is_phrase){
+    std::vector<int32_t> feats;
+    feats.push_back(word.num);
+    return feats;
+  }
+  return getSubwordFeats(word.num);
+}
+
 std::vector<int32_t> FastText::getSubwordFeats(int32_t num)const{
   std::vector<int32_t> feats;
   if (args_->maxn == 0) {
@@ -626,7 +635,7 @@ void FastText::updateModelOnWordsSyntax(Model::State& state, real lr,
     if( words[w].num == -1 )
       continue;
     std::vector<int32_t> feats = combineFeats(state,
-                                              getSubwordFeats(words[w].num),
+                                              getWordFeats(words[w]),
                                               sent_feats);
 
     auto update_func = [&](int32_t pos){
@@ -648,7 +657,7 @@ FastText::updateModelOnPhrasesSyntax(Model::State& state, real lr,
       continue;
     //This is phrase id and its components
     std::vector<int32_t> feats = combineFeats(state,
-                                              dict_->getSubwords(phrases[w].num),
+                                              getWordFeats(phrases[w]),
                                               sent_feats);
 
     auto update_func = [&](int32_t pos){
@@ -680,7 +689,7 @@ mapOtherLangToTargetSyntax(Model::State& state, real lr,
       continue;
 
     std::vector<int32_t> feats = combineFeats(state,
-                                              getSubwordFeats(other_sent[i].num),
+                                              getWordFeats(other_sent[i]),
                                               sent_feats);
 
     auto update_func = [&](int32_t pos){
@@ -713,7 +722,7 @@ mapOtherLangToTargetPhrasesSyntax(Model::State& state, real lr,
       continue;
 
     std::vector<int32_t> feats = combineFeats(state,
-                                              dict_->getSubwords(other_sent[i].num),
+                                              getWordFeats(other_sent[i]),
                                               sent_feats);
 
     auto update_func = [&](int32_t pos){

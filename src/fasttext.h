@@ -110,6 +110,7 @@ class FastText {
                                          const std::vector<int32_t>& sent_feats);
   void hybrid_skipgram(Model::State& state, real lr, const compact_line_t& line);
 
+  std::vector<int32_t> getWordFeats(const compact_word_t& word)const;
   std::vector<int32_t> getSubwordFeats(int32_t num)const;
   std::vector<int32_t> combineFeats(Model::State& state,
                                     const std::vector<int32_t>& feats,
