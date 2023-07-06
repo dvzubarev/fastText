@@ -576,19 +576,29 @@ void FastText::hybrid_skipgram(Model::State& state, real lr, const compact_line_
     updateModelOnWords(state, lr, os.words);
     mapOtherLangToTarget(state, lr, line.target.words, os.words,
                          os.mapping_to_target_words);
+    auto words_rev_mapping = create_rev_mapping(line.target.words.size(), os.mapping_to_target_words);
+    mapOtherLangToTarget(state, lr, os.words, line.target.words, words_rev_mapping);
 
     updateModelOnWordsSyntax(state, lr, os.words, os.concepts);
     mapOtherLangToTargetSyntax(state, lr, line.target.words, os.words,
                                os.mapping_to_target_words, os.concepts);
+    mapOtherLangToTargetSyntax(state, lr, os.words, line.target.words,
+                               words_rev_mapping, os.concepts);
 
 
     updateModelOnPhrases(state, lr, os.phrases);
     mapOtherLangToTargetPhrases(state, lr, line.target.phrases, os.phrases,
                                 os.mapping_to_target_phrases);
+    auto phrases_rev_mapping = create_rev_mapping(line.target.phrases.size(), os.mapping_to_target_phrases);
+    mapOtherLangToTargetPhrases(state, lr, os.phrases, line.target.phrases,
+                                phrases_rev_mapping);
+
 
     updateModelOnPhrasesSyntax(state, lr, os.phrases, os.concepts);
     mapOtherLangToTargetPhrasesSyntax(state, lr, line.target.phrases, os.phrases,
                                       os.mapping_to_target_phrases, os.concepts);
+    mapOtherLangToTargetPhrasesSyntax(state, lr, os.phrases, line.target.phrases,
+                                      phrases_rev_mapping, os.concepts);
   }
 }
 
