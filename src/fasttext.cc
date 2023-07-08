@@ -653,8 +653,8 @@ void FastText::updateModelOnWordsSyntax(Model::State& state, real lr,
     };
 
     callOnAllSiblings(words, w, update_func);
-    callOnChilds(words, w, update_func);
-    callOnHeads(words, w, update_func);
+    // callOnChilds(words, w, update_func);
+    // callOnHeads(words, w, update_func);
   }
 }
 void
@@ -675,8 +675,8 @@ FastText::updateModelOnPhrasesSyntax(Model::State& state, real lr,
     };
 
     callOnAllSiblings(phrases, w, update_func);
-    callOnChilds(phrases, w, update_func);
-    callOnHeads(phrases, w, update_func);
+    // callOnChilds(phrases, w, update_func);
+    // callOnHeads(phrases, w, update_func);
 
   }
 }
@@ -708,8 +708,8 @@ mapOtherLangToTargetSyntax(Model::State& state, real lr,
     update_func(target_pos);
 
     callOnAllSiblings(target_sent, target_pos, update_func);
-    callOnChilds(target_sent, target_pos, update_func);
-    callOnHeads(target_sent, target_pos, update_func);
+    // callOnChilds(target_sent, target_pos, update_func);
+    // callOnHeads(target_sent, target_pos, update_func);
   }
 
 }
@@ -741,8 +741,8 @@ mapOtherLangToTargetPhrasesSyntax(Model::State& state, real lr,
     update_func(target_pos);
 
     callOnAllSiblings(target_sent, target_pos, update_func);
-    callOnChilds(target_sent, target_pos, update_func);
-    callOnHeads(target_sent, target_pos, update_func);
+    // callOnChilds(target_sent, target_pos, update_func);
+    // callOnHeads(target_sent, target_pos, update_func);
   }
 
 }
